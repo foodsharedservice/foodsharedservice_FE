@@ -2,14 +2,15 @@
 
 import { ToastProvider } from "@/components/Toast";
 import TabBar from "@/components/TabBar";
+import DeviceFrame from "@/components/DeviceFrame";
 
 export default function MainLayout({ children }) {
   return (
-    <ToastProvider>
-      <div className="app-shell">
+    <DeviceFrame>
+      <ToastProvider>
         {children}
         <TabBar />
-      </div>
-    </ToastProvider>
+      </ToastProvider>
+    </DeviceFrame>
   );
 }
