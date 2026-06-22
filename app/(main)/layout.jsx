@@ -1,12 +1,13 @@
 import AppHeader from "@/components/AppHeader";
+import MobileFrame from "@/components/MobileFrame";
 
 export default function MainLayout({ children }) {
   return (
-    <div className="app-shell">
+    <MobileFrame shell>
       <AppHeader />
       <div className="app">
         <main className="app-content">{children}</main>
       </div>
-    </div>
+    </MobileFrame>
   );
 }
