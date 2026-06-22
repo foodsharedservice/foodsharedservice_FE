@@ -89,8 +89,6 @@ export default function MyScreen() {
   const total = foods.length;
   const activeCount = foods.filter((f) => f.statusTx === "IN_PROGRESS").length;
   const completedCount = foods.filter((f) => f.statusTx === "COMPLETED").length;
-  const addr = p.address ? (p.address.roadAddress || "") : "";
-  const joined = p.createdAt ? String(p.createdAt).slice(0, 10) : "";
 
   const filtered = foods.filter((f) => {
     if (filter === "ALL") return true;
@@ -115,9 +113,6 @@ export default function MyScreen() {
                 <div className="my-profile-mail">{p.email}</div>
               </div>
             </div>
-            {(addr || joined) && (
-              <div className="my-profile-addr">{addr}{addr && joined ? " · " : ""}{joined && `가입 ${joined}`}</div>
-            )}
             <div className="my-stats">
               <div className="my-stat"><b>{total}</b><span>등록</span></div>
               <div className="my-stat"><b>{activeCount}</b><span>진행중</span></div>

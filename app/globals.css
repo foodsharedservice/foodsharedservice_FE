@@ -674,12 +674,16 @@ ul, ol { list-style: none; }
 .my-profile-mail { font-size: 12px; color: var(--ink-4); margin-top: 2px; font-family: var(--font-en); }
 .my-profile-addr { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
 .my-stats {
-  display: flex; gap: 14px; margin-top: 14px;
-  padding-top: 14px; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);
 }
-.my-stat { display: flex; flex-direction: column; gap: 1px; }
-.my-stat b { font-family: var(--font-en); font-size: 17px; font-weight: 700; color: var(--primary); }
-.my-stat span { font-size: 10.5px; color: var(--ink-4); }
+.my-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  text-align: center; padding: 2px 0;
+}
+.my-stat + .my-stat { border-left: 1px solid var(--line); }
+.my-stat b { font-family: var(--font-en); font-size: 18px; font-weight: 700; color: var(--primary); line-height: 1.1; }
+.my-stat span { font-size: 11px; color: var(--ink-4); }
 
 .my-menu {
   background: var(--surface);
