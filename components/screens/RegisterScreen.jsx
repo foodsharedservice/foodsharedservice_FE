@@ -1,34 +1,32 @@
 "use client";
 
-/* RegisterScreen.jsx — D-04 물품 등록
-   API 1: POST /foods/expired-date  (multipart: expiredImage) → { expiredImageId, expired, accessUrl }
-   API 2: POST /foods               (multipart: request JSON + images[])
-   실제 파일 업로드 + 실제 API 호출. */
+/* RegisterScreen.jsx — 나눔 등록
+   API 1: POST /foods/expired-date (multipart: expiredImage) → { expiredImageId, expired, accessUrl }
+   API 2: POST /foods (multipart: request JSON + images[]) */
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Icon from "@/components/icons";
-import { Photo, FormError } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/components/Toast";
 import API from "@/lib/api";
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const toast = useToast();
   const expInputRef = useRef(null);
   const imgInputRef = useRef(null);
 
-  const [aiState, setAiState] = useState("empty"); // empty | loading | done | error
+  const [aiState, setAiState] = useState("empty"); // empty | loading | done
+  const [expFile, setExpFile] = useState(null);
+  const [expPreview, setExpPreview] = useState(null);
   const [expDate, setExpDate] = useState(null);
   const [expiredImageId, setExpiredImageId] = useState(null);
-  const [expPreview, setExpPreview] = useState(null);
-  const [aiError, setAiError] = useState(null);
 
   const [foodName, setFoodName] = useState("");
   const [capacity, setCapacity] = useState(3);
   const [details, setDetails] = useState("");
   const [photos, setPhotos] = useState([]); // { id, url, file }
-  const [submitError, setSubmitError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -37,12 +35,19 @@ export default function RegisterScreen() {
 
   const onPickExpired = (e) => {
     const file = e.target.files && e.target.files[0];
+    if (e.target) e.target.value = "";
     if (!file) return;
+    setExpFile(file);
     setExpPreview(URL.createObjectURL(file));
+    setAiState("empty");
+    setExpDate(null);
+    setExpiredImageId(null);
+  };
+
+  const recognize = () => {
+    if (!expFile) { toast.show("소비기한 사진을 먼저 올려주세요"); return; }
     setAiState("loading");
-    setAiError(null);
-    // POST /foods/expired-date (multipart: expiredImage) → { expiredImageId, accessUrl, expired }
-    API.foods.recognizeExpiry(file)
+    API.foods.recognizeExpiry(expFile)
       .then((data) => {
         if (data && data.expired && data.expiredImageId != null) {
           setExpDate(data.expired);
@@ -50,8 +55,8 @@ export default function RegisterScreen() {
           if (data.accessUrl) setExpPreview(data.accessUrl);
           setAiState("done");
         } else {
-          setAiState("error");
-          setAiError("소비기한을 인식하지 못했어요. 다시 시도해주세요.");
+          setAiState("empty");
+          toast.show("소비기한을 인식하지 못했어요. 다시 시도해주세요.");
         }
       })
       .catch((err) => {
@@ -61,48 +66,33 @@ export default function RegisterScreen() {
           FILE_TOO_LARGE: "파일 용량이 너무 커요 (최대 10MB).",
           UNSUPPORTED_FILE_TYPE: "지원하지 않는 파일 형식이에요.",
         };
-        setAiState("error");
-        setAiError(map[err.code] || err.message || "인식에 실패했어요.");
-      })
-      .finally(() => { if (e.target) e.target.value = ""; });
-  };
-
-  const resetExpired = () => {
-    setAiState("empty");
-    setExpDate(null);
-    setExpiredImageId(null);
-    setExpPreview(null);
-    setAiError(null);
+        setAiState("empty");
+        toast.show(map[err.code] || err.message || "인식에 실패했어요.");
+      });
   };
 
   const onPickImages = (e) => {
     const files = Array.from(e.target.files || []);
+    if (e.target) e.target.value = "";
     if (!files.length) return;
     setPhotos((prev) => {
-      const room = Math.max(0, 4 - prev.length);
+      const room = Math.max(0, 5 - prev.length);
       const added = files.slice(0, room).map((file) => ({ id: `${Date.now()}-${file.name}-${Math.random()}`, url: URL.createObjectURL(file), file }));
       return [...prev, ...added];
     });
-    if (e.target) e.target.value = "";
   };
-
   const removePhoto = (id) => setPhotos((prev) => prev.filter((p) => p.id !== id));
 
   const canSubmit = aiState === "done" && expiredImageId != null && foodName.trim().length > 0 && !busy;
 
   const submitFood = async () => {
+    if (aiState !== "done") { toast.show("소비기한 인식을 먼저 해주세요"); return; }
+    if (!foodName.trim()) { toast.show("물품명을 입력해주세요"); return; }
     if (!canSubmit) return;
-    setSubmitError(null);
     setBusy(true);
     try {
-      // POST /foods (multipart: request + images[])
-      await API.foods.create({
-        foodName: foodName.trim(),
-        expiredImageId,
-        capacity,
-        details,
-        images: photos.map((p) => p.file),
-      });
+      await API.foods.create({ foodName: foodName.trim(), expiredImageId, capacity, details, images: photos.map((p) => p.file) });
+      toast.show("물품이 등록되었어요!");
       router.push("/");
     } catch (err) {
       const map = {
@@ -112,7 +102,7 @@ export default function RegisterScreen() {
         FILE_TOO_LARGE: "사진 용량이 너무 커요.",
         UNSUPPORTED_FILE_TYPE: "지원하지 않는 사진 형식이에요.",
       };
-      setSubmitError(map[err.code] || err.message || "등록에 실패했어요.");
+      toast.show(map[err.code] || err.message || "등록에 실패했어요.");
     } finally {
       setBusy(false);
     }
@@ -121,243 +111,119 @@ export default function RegisterScreen() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="register">
+    <div>
       <input ref={expInputRef} type="file" accept="image/*" hidden onChange={onPickExpired} />
       <input ref={imgInputRef} type="file" accept="image/*" multiple hidden onChange={onPickImages} />
 
-      <div className="register-head">
-        <button className="crumb-back" onClick={() => router.push("/")}>
-          <Icon.ChevronLeft /> 돌아가기
-        </button>
-        <h1 className="register-title">물품 등록</h1>
+      {/* 헤더 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 8px", position: "sticky", top: 0, zIndex: 20, background: "rgba(251,250,248,.92)", backdropFilter: "blur(10px)" }}>
+        <button onClick={() => router.back()} aria-label="뒤로" style={hdrBtn}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F1D1B" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg></button>
+        <div style={{ fontSize: 18, fontWeight: 800 }}>나눔 등록</div>
       </div>
 
-      <div className="register-grid">
-        {/* ============ LEFT: photos & AI ============ */}
-        <div>
-          <section className="register-card">
-            <div className="card-head">
-              <div>
-                <div className="eyebrow">STEP 1 · 필수</div>
-                <h3 className="card-title">소비기한 사진</h3>
-              </div>
-              <div className="ai-chip"><Icon.Sparkle /> AI 자동 인식</div>
-            </div>
-            <p className="card-help">
-              가공식품 라벨의 소비기한 부분이 잘 보이도록 찍어주세요. AI가 인식한 날짜로 자동 설정돼요.
-            </p>
+      <div style={{ padding: "8px 18px 0" }}>
+        {/* STEP 1 */}
+        <div style={stepLabel}>STEP 1 · 소비기한 인증</div>
+        <div style={{ fontSize: 14, color: "#6B6560", margin: "6px 0 14px", lineHeight: 1.5 }}>소비기한이 보이게 촬영하면 AI가 자동으로 날짜를 읽어요.</div>
 
-            <div className="exp-upload">
-              {aiState === "empty" || aiState === "error" ? (
-                <button className="exp-empty" onClick={() => expInputRef.current?.click()}>
-                  <Icon.Camera />
-                  <div className="exp-empty-title">소비기한 사진을 올려주세요</div>
-                  <div className="exp-empty-sub">JPG · PNG · 최대 10MB</div>
-                  <div className="btn primary sm" style={{ marginTop: 14 }}>파일 선택</div>
-                </button>
-              ) : (
-                <div className="exp-shot">
-                  <Photo label="소비기한 사진" src={expPreview} className="exp-photo-bg" />
-                  <button className="exp-replace" onClick={resetExpired}>다시 올리기</button>
-                </div>
-              )}
-            </div>
-
-            {/* AI result card */}
-            <div className={`ai-result ${aiState}`}>
-              {aiState === "empty" && (
-                <div className="ai-empty">
-                  <div className="ai-icon"><Icon.Sparkle /></div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>소비기한 인식 대기 중</div>
-                    <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>사진을 올리면 자동으로 인식해요</div>
-                  </div>
-                </div>
-              )}
-              {aiState === "loading" && (
-                <div className="ai-loading">
-                  <div className="ai-spin"></div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>AI가 소비기한을 읽는 중…</div>
-                    <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>보통 2-5초 정도 걸려요</div>
-                  </div>
-                </div>
-              )}
-              {aiState === "error" && (
-                <div className="ai-empty">
-                  <div className="ai-icon" style={{ background: "var(--danger)" }}><Icon.X /></div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: "var(--danger)" }}>인식 실패</div>
-                    <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>{aiError}</div>
-                  </div>
-                </div>
-              )}
-              {aiState === "done" && (
-                <div className="ai-done">
-                  <div className="ai-done-row">
-                    <div className="eyebrow" style={{ color: "var(--primary)" }}>
-                      AI 인식 결과 <Icon.Lock style={{ verticalAlign: "middle", marginLeft: 2 }} />
-                    </div>
-                  </div>
-                  <div className="ai-date font-en">{expDate}</div>
-                  <div className="ai-hint">
-                    인식이 잘못됐다면 사진을 다시 올려주세요.<br />
-                    소비기한은 사용자가 임의로 수정할 수 없어요.
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="register-card">
-            <div className="card-head">
-              <div>
-                <div className="eyebrow">STEP 2 · 선택</div>
-                <h3 className="card-title">추가 사진</h3>
-              </div>
-              <span className="card-counter font-en">{photos.length} / 4</span>
-            </div>
-            <p className="card-help">제품 앞면·뒷면·라벨 등을 보여주면 신뢰도가 올라가요.</p>
-
-            <div className="photo-grid">
-              {photos.map((p) => (
-                <div className="reg-photo" key={p.id}>
-                  <Photo label="" src={p.url} ratio="1/1" />
-                  <button className="reg-photo-del" onClick={() => removePhoto(p.id)} aria-label="삭제"><Icon.X /></button>
-                </div>
-              ))}
-              {photos.length < 4 && (
-                <button className="reg-photo-add" onClick={() => imgInputRef.current?.click()}>
-                  <Icon.Plus />
-                  <span>추가</span>
-                </button>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* ============ RIGHT: form ============ */}
-        <div>
-          <section className="register-card">
-            <div className="card-head">
-              <div>
-                <div className="eyebrow">STEP 3 · 필수</div>
-                <h3 className="card-title">물품 정보</h3>
-              </div>
-            </div>
-
-            <div className="label">물품 이름</div>
-            <input className="field-input" value={foodName} onChange={(e) => setFoodName(e.target.value)}
-              placeholder="예) 미개봉 시리얼" maxLength={30} />
-            <div style={{ textAlign: "right", fontSize: 11, color: "var(--ink-4)", marginTop: 4, fontFamily: "var(--font-en)" }}>
-              {foodName.length} / 30
-            </div>
-
-            <div className="label" style={{ marginTop: 18, display: "flex", justifyContent: "space-between" }}>
-              <span>정원 수 <span className="hint">(나눠 받을 인원)</span></span>
-              <span className="hint">최대 10명</span>
-            </div>
-            <div className="capacity-stepper">
-              <button className="cap-btn" onClick={() => setCapacity((c) => Math.max(1, c - 1))} aria-label="감소"><Icon.Minus /></button>
-              <div className="cap-value">
-                <span className="font-en">{capacity}</span>
-                <span style={{ fontSize: 14, color: "var(--ink-4)", fontWeight: 500 }}>명</span>
-              </div>
-              <button className="cap-btn" onClick={() => setCapacity((c) => Math.min(10, c + 1))} aria-label="증가"><Icon.Plus /></button>
-            </div>
-
-            <div className="label" style={{ marginTop: 18 }}>
-              상세 내용 <span className="hint">(픽업 방법, 보관 상태 등)</span>
-            </div>
-            <textarea className="field-input textarea" value={details} onChange={(e) => setDetails(e.target.value)}
-              maxLength={500} placeholder="미개봉, 박스째 나눔 OK · 직거래 희망 위치 · 보관 상태 등을 적어주세요" />
-            <div style={{ textAlign: "right", fontSize: 11, color: "var(--ink-4)", marginTop: 4, fontFamily: "var(--font-en)" }}>
-              {details.length} / 500
-            </div>
-          </section>
-
-          <div className="register-rules">
-            <Icon.Lock style={{ flexShrink: 0, marginTop: 2 }} />
-            <div>
-              <b>등록 규칙</b>
-              <ul>
-                <li>가공·미개봉 식품만 등록해주세요 (직접 만든 음식·신선식품 ✕)</li>
-                <li>회원당 활성 물품은 최대 10개</li>
-                <li>소비기한은 AI 인식 결과로 고정 · 사용자 수정 불가</li>
-              </ul>
-            </div>
+        {aiState === "loading" ? (
+          <div style={{ border: "1.5px solid #EDE6DC", borderRadius: 16, padding: "34px 16px", textAlign: "center", background: "#F9F6F1" }}>
+            <div style={{ width: 40, height: 40, border: "3px solid #EAE2D6", borderTopColor: "var(--ac)", borderRadius: "50%", margin: "0 auto 14px", animation: "spin .8s linear infinite" }} />
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: "#37332E" }}>AI가 소비기한을 읽고 있어요...</div>
           </div>
-
-          <FormError>{submitError}</FormError>
-
-          <div className="register-cta">
-            <button className="btn ghost lg" onClick={() => router.push("/")}>취소</button>
-            <button className="btn primary lg" style={{ flex: 1 }} disabled={!canSubmit} onClick={submitFood}>
-              {busy ? "등록 중…" : aiState !== "done" ? "소비기한 사진을 먼저 올려주세요" : foodName.trim() ? "등록하기" : "물품 이름을 입력해주세요"}
+        ) : aiState === "done" ? (
+          <div style={{ border: "1.5px solid #CBE6D5", borderRadius: 16, padding: 18, background: "#F0F8F3", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 54, height: 54, borderRadius: 12, background: "#DCEFE3", color: "#2E9E5B", display: "grid", placeItems: "center", fontSize: 11, fontWeight: 800, fontFamily: "var(--font-mono)", overflow: "hidden" }}>
+              {expPreview ? <img src={expPreview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "인식"}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12.5, color: "#2E9E5B", fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2E9E5B" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>소비기한 인식 완료
+              </div>
+              <div style={{ fontSize: 19, fontWeight: 800, marginTop: 3 }}>{(expDate || "").replace(/-/g, ".")}</div>
+              <div style={{ fontSize: 11.5, color: "#7C8567", marginTop: 3 }}>AI 인식값으로 자동 설정 · 수정 불가</div>
+            </div>
+            <button onClick={() => { setAiState("empty"); setExpDate(null); setExpiredImageId(null); setExpFile(null); setExpPreview(null); }} aria-label="다시 올리기" style={{ border: "none", background: "transparent", cursor: "pointer", padding: 4 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C8567" strokeWidth="2.2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
             </button>
           </div>
+        ) : (
+          <div>
+            <button onClick={() => expInputRef.current?.click()} style={{ width: "100%", border: "2px dashed #DCD4CA", borderRadius: 16, padding: "34px 16px", textAlign: "center", background: "#F9F6F1", cursor: "pointer", overflow: "hidden" }}>
+              {expPreview ? (
+                <img src={expPreview} alt="소비기한" style={{ maxHeight: 140, maxWidth: "100%", borderRadius: 10, objectFit: "contain" }} />
+              ) : (
+                <>
+                  <div style={{ width: 54, height: 54, borderRadius: "50%", background: "#E2F0E7", display: "grid", placeItems: "center", margin: "0 auto 12px" }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6BA17F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+                  </div>
+                  <div style={{ fontSize: 14, color: "#9A938C" }}>소비기한 사진을 올려주세요</div>
+                </>
+              )}
+            </button>
+            <button onClick={recognize} style={{ width: "100%", marginTop: 12, padding: 14, borderRadius: 13, border: "none", background: "#2A2723", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /></svg>AI로 소비기한 인식하기
+            </button>
+          </div>
+        )}
+
+        <div style={{ height: 1, background: "#F0ECE6", margin: "24px 0" }} />
+
+        {/* STEP 2 */}
+        <div style={stepLabel}>STEP 2 · 물품 정보</div>
+        <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={fieldLabel}>물품명</label>
+            <input value={foodName} onChange={(e) => setFoodName(e.target.value)} maxLength={30} placeholder="예) 미개봉 시리얼 600g" style={textInput} />
+          </div>
+          <div>
+            <label style={fieldLabel}>모집 정원</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <button onClick={() => setCapacity((c) => Math.max(1, c - 1))} style={stepBtn}>−</button>
+              <span style={{ fontSize: 18, fontWeight: 800, minWidth: 24, textAlign: "center" }}>{capacity}</span>
+              <button onClick={() => setCapacity((c) => Math.min(10, c + 1))} style={stepBtn}>+</button>
+              <span style={{ fontSize: 13, color: "#9A938C" }}>명에게 나눔</span>
+            </div>
+          </div>
+          <div>
+            <label style={fieldLabel}>사진 (선택)</label>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {photos.map((p) => (
+                <div key={p.id} style={{ position: "relative", width: 74, height: 74 }}>
+                  <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} />
+                  <button onClick={() => removePhoto(p.id)} aria-label="삭제" style={{ position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: "50%", border: "none", background: "rgba(31,29,24,.8)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", fontSize: 12 }}>✕</button>
+                </div>
+              ))}
+              {photos.length < 5 && (
+                <button onClick={() => imgInputRef.current?.click()} style={{ width: 74, height: 74, border: "1.5px dashed #DCD4CA", borderRadius: 12, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, color: "#A89F94", cursor: "pointer", background: "transparent" }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A89F94" strokeWidth="2" strokeLinecap="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4z" /><circle cx="12" cy="13" r="3" /></svg>
+                  <span style={{ fontSize: 11 }}>{photos.length}/5</span>
+                </button>
+              )}
+            </div>
+          </div>
+          <div>
+            <label style={fieldLabel}>상세 내용</label>
+            <textarea value={details} onChange={(e) => setDetails(e.target.value)} maxLength={500} rows={4} placeholder="물품 상태, 거래 방법 등을 적어주세요." style={{ ...textInput, resize: "none", lineHeight: 1.5 }} />
+          </div>
         </div>
       </div>
+      <div style={{ height: 96 }} />
 
-      <style>{`
-        .register { padding-bottom: 60px; }
-        .register-head { display: flex; align-items: center; gap: 16px; padding: 16px 32px; max-width: 1280px; margin: 0 auto; }
-        .register-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
-        .register-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 0 32px; max-width: 1280px; margin: 0 auto; }
-        .register-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 22px 24px; margin-bottom: 16px; box-shadow: var(--shadow-card); }
-        .card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
-        .card-title { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; }
-        .card-help { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; margin-bottom: 14px; line-height: 1.55; }
-        .card-counter { font-size: 12px; color: var(--ink-3); }
-        .ai-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--accent-100); color: var(--accent-700); border-radius: 999px; font-size: 11.5px; font-weight: 700; }
-        .exp-upload { margin-bottom: 12px; }
-        .exp-empty { width: 100%; aspect-ratio: 4/3; padding: 0; border-radius: var(--r-img); border: 1.5px dashed var(--line-2); background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--ink-3); transition: all 0.12s; }
-        .exp-empty:hover { border-color: var(--primary); background: var(--primary-50); }
-        .exp-empty svg { width: 32px; height: 32px; color: var(--ink-4); }
-        .exp-empty-title { font-size: 14px; font-weight: 600; color: var(--ink-2); margin-top: 6px; }
-        .exp-empty-sub { font-size: 11.5px; color: var(--ink-4); font-family: var(--font-en); }
-        .exp-shot { position: relative; }
-        .exp-shot .ph { aspect-ratio: 4/3; }
-        .exp-replace { position: absolute; top: 10px; right: 10px; padding: 5px 10px; background: rgba(31,29,24,0.78); color: var(--bg); border-radius: 6px; font-size: 11.5px; font-weight: 600; backdrop-filter: blur(6px); }
-        .exp-replace:hover { background: var(--ink); }
-        .ai-result { border-radius: 10px; padding: 14px 16px; transition: all 0.2s ease; }
-        .ai-result.empty, .ai-result.error { background: var(--bg-2); border: 1px dashed var(--line-2); }
-        .ai-result.loading { background: var(--primary-50); border: 1px solid var(--primary-100); }
-        .ai-result.done { background: linear-gradient(135deg, var(--accent-50), var(--surface-2)); border: 1px solid var(--accent-100); }
-        .ai-empty, .ai-loading { display: flex; align-items: center; gap: 12px; }
-        .ai-icon { width: 32px; height: 32px; background: var(--ink-5); color: var(--surface); border-radius: 50%; display: grid; place-items: center; }
-        .ai-spin { width: 28px; height: 28px; border: 2.5px solid var(--primary-100); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .ai-done-row { display: flex; align-items: center; justify-content: space-between; }
-        .ai-date { font-family: var(--font-en); font-size: 30px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); margin-top: 4px; font-variant-numeric: tabular-nums; }
-        .ai-hint { font-size: 11.5px; color: var(--ink-3); margin-top: 8px; line-height: 1.55; }
-        .photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .reg-photo { position: relative; aspect-ratio: 1/1; }
-        .reg-photo .ph { border-radius: 10px; width: 100%; height: 100%; }
-        .reg-photo-del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; background: rgba(31,29,24,0.78); color: #fff; border-radius: 50%; display: grid; place-items: center; }
-        .reg-photo-del svg { width: 12px; height: 12px; }
-        .reg-photo-add { aspect-ratio: 1/1; padding: 0; background: var(--surface-2); border: 1.5px dashed var(--line-2); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink-3); font-size: 11px; }
-        .reg-photo-add:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-50); }
-        .capacity-stepper { display: flex; align-items: center; gap: 12px; padding: 4px; background: var(--bg-2); border-radius: var(--r-btn); width: fit-content; }
-        .cap-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); display: grid; place-items: center; }
-        .cap-btn:hover { border-color: var(--primary); color: var(--primary); }
-        .cap-value { min-width: 80px; font-size: 22px; font-weight: 700; text-align: center; display: inline-flex; align-items: baseline; gap: 4px; justify-content: center; }
-        .register-rules { display: flex; gap: 10px; padding: 14px 16px; background: var(--primary-50); border: 1px solid var(--primary-100); border-radius: var(--r-card); color: var(--primary-700); font-size: 12.5px; line-height: 1.6; margin-bottom: 16px; }
-        .register-rules svg { color: var(--primary); }
-        .register-rules b { font-weight: 700; display: block; margin-bottom: 4px; color: var(--ink); }
-        .register-rules ul { padding-left: 14px; color: var(--ink-3); font-size: 12px; }
-        .register-rules li { list-style: disc; margin-top: 2px; }
-        .register-cta { display: flex; gap: 8px; }
-        @media (max-width: 900px) {
-          .register-head { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
-          .register-title { font-size: 18px; }
-          .register-grid { grid-template-columns: 1fr; gap: 0; padding: 0 16px; }
-          .register-card { padding: 18px 16px; }
-          .photo-grid { grid-template-columns: repeat(3, 1fr); }
-          .register-cta { flex-direction: column; }
-          .register-cta .btn { width: 100%; }
-        }
-      `}</style>
+      {/* 하단 등록 버튼 */}
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#fff", borderTop: "1px solid #EEE9E3", padding: "12px 16px calc(12px + env(safe-area-inset-bottom))", zIndex: 40 }}>
+        {canSubmit ? (
+          <button onClick={submitFood} style={{ width: "100%", padding: 15, borderRadius: 13, border: "none", background: "var(--ac)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>{busy ? "등록 중…" : "나눔 등록하기"}</button>
+        ) : (
+          <button onClick={submitFood} style={{ width: "100%", padding: 15, borderRadius: 13, border: "none", background: "#F1ECE6", color: "#B6AFA7", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>{aiState === "done" ? "물품명을 입력해주세요" : "소비기한 인식 후 등록할 수 있어요"}</button>
+        )}
+      </div>
     </div>
   );
 }
+
+const hdrBtn = { width: 40, height: 40, border: "none", background: "transparent", display: "grid", placeItems: "center", cursor: "pointer" };
+const stepLabel = { fontSize: 13, fontWeight: 800, color: "var(--ac)", letterSpacing: "0.02em" };
+const fieldLabel = { fontSize: 13.5, fontWeight: 700, color: "#37332E", display: "block", marginBottom: 7 };
+const textInput = { width: "100%", padding: "13px 14px", borderRadius: 12, border: "1.5px solid #E5DFD8", background: "#fff", fontSize: 15, color: "#1F1D1B" };
+const stepBtn = { width: 42, height: 42, borderRadius: 12, border: "1.5px solid #E5DFD8", background: "#fff", fontSize: 20, color: "#6B6560", cursor: "pointer" };

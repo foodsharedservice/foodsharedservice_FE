@@ -1,11 +1,14 @@
+import { ToastProvider } from "@/components/Toast";
 import { LoginScreen } from "@/components/screens/AuthScreens";
 
-export const metadata = { title: "로그인 · 냠냠" };
+export const metadata = { title: "로그인 · 오늘나눔" };
 
 export default function LoginPage() {
   return (
-    <div className="auth-shell">
-      <LoginScreen />
+    <div className="app-shell">
+      <ToastProvider>
+        <LoginScreen />
+      </ToastProvider>
     </div>
   );
 }

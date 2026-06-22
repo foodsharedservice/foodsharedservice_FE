@@ -1,65 +1,55 @@
 "use client";
 
-/* MyScreen.jsx — D-08 마이페이지
-   API: GET /members/me, GET /members/me/foods, DELETE /foods/{foodId},
-        DELETE /members/me, POST /auth/logout
-   실제 API 데이터만 사용. 비로그인 시 로그인으로 유도. */
+/* MyScreen.jsx — 마이페이지
+   API: GET /members/me, GET /members/me/foods, GET /members/me/requests,
+        POST /auth/logout, DELETE /members/me */
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Icon from "@/components/icons";
-import { Photo, StatusBadge, Avatar, StateBox } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/components/Toast";
+import { StateBox } from "@/components/ui";
+import { initialOf } from "@/lib/foodUi";
 import API from "@/lib/api";
-
-const MY_FILTERS = [
-  { id: "ALL", label: "전체" },
-  { id: "IN_PROGRESS", label: "진행중" },
-  { id: "COMPLETED", label: "완료" },
-  { id: "DONE", label: "만료/미완료" },
-];
 
 export default function MyScreen() {
   const router = useRouter();
   const { user, loading: authLoading, setUser } = useAuth();
+  const toast = useToast();
   const [profile, setProfile] = useState(null);
-  const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("ALL");
+  const [counts, setCounts] = useState({ foods: 0, sent: 0, received: 0 });
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
+    if (!user) { router.replace("/login"); return; }
     let alive = true;
     setLoading(true);
     setError(null);
-    Promise.all([API.members.me(), API.members.myFoods().catch(() => [])])
-      .then(([me, fs]) => {
-        if (!alive) return;
-        setProfile(me);
-        setFoods(Array.isArray(fs) ? fs : []);
-      })
+    API.members.me()
+      .then((me) => { if (alive) setProfile(me); })
       .catch((e) => { if (alive) setError(e); })
       .finally(() => { if (alive) setLoading(false); });
+
+    Promise.all([
+      API.members.myFoods().catch(() => []),
+      API.requests.mine().catch(() => []),
+    ]).then(async ([foods, sent]) => {
+      if (!alive) return;
+      const active = (foods || []).filter((f) => f.statusTx === "IN_PROGRESS");
+      const recvLists = await Promise.all(active.map((f) => API.requests.received(f.foodId).catch(() => [])));
+      if (!alive) return;
+      setCounts({ foods: (foods || []).length, sent: (sent || []).length, received: recvLists.flat().length });
+    });
     return () => { alive = false; };
   }, [authLoading, user, router]);
-
-  const removeFood = (foodId) => {
-    // DELETE /foods/{foodId} → status_tx INCOMPLETE (soft delete)
-    API.foods.remove(foodId).catch(() => {});
-    setFoods((prev) => prev.map((f) => (f.foodId === foodId ? { ...f, statusTx: "INCOMPLETE" } : f)));
-  };
 
   const logout = async () => {
     try { await API.auth.logout(); } catch {}
     setUser(null);
     router.push("/login");
   };
-
   const withdraw = async () => {
     if (!window.confirm("정말 탈퇴하시겠어요? 탈퇴한 이메일은 재가입할 수 없어요.")) return;
     try { await API.members.remove(); } catch {}
@@ -68,114 +58,77 @@ export default function MyScreen() {
   };
 
   if (authLoading || (user && loading)) {
-    return <div className="my"><StateBox kind="loading" title="내 정보를 불러오는 중…" /></div>;
+    return <div><StateBox kind="loading" title="내 정보를 불러오는 중…" /></div>;
   }
-  if (!user) return null; // 리다이렉트 중
+  if (!user) return null;
   if (error) {
-    return (
-      <div className="my">
-        <StateBox kind="error" title="내 정보를 불러오지 못했어요"
-          sub={`서버에 연결할 수 없습니다. (${error.code || error.status || error.message || "네트워크 오류"})`}
-          onRetry={() => router.refresh()} />
-      </div>
-    );
+    return <div><StateBox kind="error" title="내 정보를 불러오지 못했어요" sub={`(${error.code || error.status || error.message || "네트워크 오류"})`} onRetry={() => router.refresh()} /></div>;
   }
 
   const p = profile || user;
-  const total = foods.length;
-  const activeCount = foods.filter((f) => f.statusTx === "IN_PROGRESS").length;
-  const completedCount = foods.filter((f) => f.statusTx === "COMPLETED").length;
-  const addr = p.address ? (p.address.roadAddress || "") : "";
-  const joined = p.createdAt ? String(p.createdAt).slice(0, 10) : "";
-
-  const filtered = foods.filter((f) => {
-    if (filter === "ALL") return true;
-    if (filter === "DONE") return f.statusTx === "EXPIRED" || f.statusTx === "INCOMPLETE";
-    return f.statusTx === filter;
-  });
+  const addr = (p.address && (p.address.roadAddress || "")) || "";
 
   return (
-    <div className="my">
-      <div className="my-head">
-        <div className="eyebrow" style={{ color: "var(--primary)" }}>MY PAGE</div>
-      </div>
+    <div style={{ minHeight: "100dvh" }}>
+      <div style={{ padding: "16px 18px 12px" }}><div style={{ fontSize: 21, fontWeight: 800 }}>마이</div></div>
 
-      <div className="my-layout">
-        {/* ============ Sidebar ============ */}
-        <aside className="my-sidebar">
-          <div className="my-profile">
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <Avatar name={p.nickName} size={44} />
-              <div style={{ minWidth: 0 }}>
-                <div className="my-profile-name">{p.nickName}</div>
-                <div className="my-profile-mail">{p.email}</div>
-              </div>
-            </div>
-            {(addr || joined) && (
-              <div className="my-profile-addr">{addr}{addr && joined ? " · " : ""}{joined && `가입 ${joined}`}</div>
-            )}
-            <div className="my-stats">
-              <div className="my-stat"><b>{total}</b><span>등록</span></div>
-              <div className="my-stat"><b>{activeCount}/10</b><span>활성</span></div>
-              <div className="my-stat"><b>{completedCount}</b><span>완료</span></div>
-            </div>
-          </div>
-
-          <nav className="my-menu">
-            <button className="my-menu-item on"><Icon.Users /> 내가 등록한 물품</button>
-            <button className="my-menu-item"><Icon.Heart /> 받은 / 보낸 요청</button>
-            <button className="my-menu-item"><Icon.Pin /> 정보 수정</button>
-            <div className="my-menu-sep"></div>
-            <button className="my-menu-item" onClick={logout}><Icon.ArrowRight /> 로그아웃</button>
-            <button className="my-menu-item danger" onClick={withdraw}><Icon.Trash /> 회원 탈퇴</button>
-          </nav>
-        </aside>
-
-        {/* ============ Main: my foods ============ */}
-        <div>
-          <div className="my-main-head">
-            <div className="my-main-title">내가 등록한 물품</div>
-            <div className="my-main-count">총 {total}건 · 활성 {activeCount}건</div>
-          </div>
-
-          <div className="tab-row" style={{ marginBottom: 16 }}>
-            {MY_FILTERS.map((f) => (
-              <button key={f.id} className={`tab ${filter === f.id ? "on" : ""}`} onClick={() => setFilter(f.id)}>
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="my-list">
-            {filtered.map((f) => (
-              <div className="my-row" key={f.foodId}>
-                <Photo label="냠냠" src={f.thumbnailUrl} ratio="1/1" />
-                <div className="my-row-body">
-                  <div className="my-row-name">{f.foodName}</div>
-                  <div className="my-row-exp">소비기한 {f.expired}</div>
-                  <div className="my-row-tags">
-                    <StatusBadge status={f.statusTx} />
-                    <span className="badge incomplete" style={{ background: "var(--bg-2)" }}>
-                      {f.approvedCount}/{f.capacity}명
-                    </span>
-                  </div>
-                </div>
-                <div className="my-row-actions">
-                  <button className="btn ghost sm" onClick={() => router.push(`/foods/${f.foodId}`)}>보기</button>
-                  {(f.statusTx === "IN_PROGRESS" || f.statusTx === "EXPIRED") && (
-                    <button className="btn danger-ghost sm" onClick={() => removeFood(f.foodId)}>삭제</button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {filtered.length === 0 && (
-              <div style={{ padding: "60px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
-                {total === 0 ? "아직 등록한 물품이 없어요" : "해당하는 물품이 없어요"}
-              </div>
-            )}
-          </div>
+      {/* 프로필 카드 */}
+      <div style={{ margin: "0 18px", padding: 20, borderRadius: 18, background: "linear-gradient(135deg,#E8F6EC,#D6EFDD)", display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ width: 58, height: 58, borderRadius: "50%", background: "#fff", color: "var(--ac)", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 22 }}>{initialOf(p.nickName)}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 18, fontWeight: 800 }}>{p.nickName}</div>
+          <div style={{ fontSize: 13, color: "#8A7A66", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{addr || p.email}</div>
         </div>
+        <button onClick={() => router.push("/mypage/edit")} style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: "rgba(255,255,255,.7)", color: "#37332E", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>수정</button>
       </div>
+
+      {/* 통계 */}
+      <div style={{ display: "flex", margin: 18, borderRadius: 16, background: "#F7F3EE", overflow: "hidden" }}>
+        <Stat n={counts.foods} label="등록 물품" onClick={() => router.push("/mypage/foods")} />
+        <div style={{ width: 1, background: "#E9E3DB" }} />
+        <Stat n={counts.sent} label="보낸 요청" onClick={() => router.push("/requests")} />
+        <div style={{ width: 1, background: "#E9E3DB" }} />
+        <Stat n={counts.received} label="받은 요청" onClick={() => router.push("/requests")} />
+      </div>
+
+      {/* 메뉴 */}
+      <div style={{ padding: "0 6px" }}>
+        <MenuItem onClick={() => router.push("/mypage/foods")} label="내 등록 물품">
+          <rect x="3" y="3" width="18" height="18" rx="3" /><path d="M3 9h18M9 21V9" />
+        </MenuItem>
+        <MenuItem onClick={() => router.push("/requests")} label="나눔 요청 내역">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </MenuItem>
+        <MenuItem onClick={() => router.push("/mypage/edit")} label="회원정보 수정">
+          <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+        </MenuItem>
+        <MenuItem onClick={logout} label="로그아웃" color="#C9472F" noChevron stroke="#C9472F">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+        </MenuItem>
+        <MenuItem onClick={withdraw} label="회원 탈퇴" color="#9A938C" noChevron stroke="#9A938C">
+          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </MenuItem>
+      </div>
+      <div style={{ height: 96 }} />
     </div>
+  );
+}
+
+function Stat({ n, label, onClick }) {
+  return (
+    <button onClick={onClick} style={{ flex: 1, padding: "16px 8px", border: "none", background: "transparent", cursor: "pointer" }}>
+      <div style={{ fontSize: 20, fontWeight: 800 }}>{n}</div>
+      <div style={{ fontSize: 12.5, color: "#9A938C", marginTop: 2 }}>{label}</div>
+    </button>
+  );
+}
+
+function MenuItem({ onClick, label, children, color = "#1F1D1B", stroke = "#6B6560", noChevron }) {
+  return (
+    <button onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: 16, border: "none", background: "transparent", cursor: "pointer", textAlign: "left" }}>
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+      <span style={{ flex: 1, fontSize: 15.5, fontWeight: 600, color }}>{label}</span>
+      {!noChevron && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C7BFB5" strokeWidth="2.4"><path d="m9 18 6-6-6-6" /></svg>}
+    </button>
   );
 }

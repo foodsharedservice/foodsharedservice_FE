@@ -1,26 +1,35 @@
-# 냠냠 · 음식 나눔 서비스 (Frontend)
+# 오늘나눔 · 음식 나눔 서비스 (Frontend)
 
 미개봉 가공식품을 동네 이웃과 나누는 음식 나눔 서비스의 프론트엔드입니다.
-[`food_shared_service`](https://github.com/foodsharedservice) 백엔드 API 명세(v3)와 제공된 Hi-fi 디자인을 기반으로 구현했습니다.
+[`food_shared_service`](https://github.com/foodsharedservice) 백엔드 API 명세(v3)를 그대로 사용하며,
+**모바일 우선(단일 컬럼) 디자인**으로 구현했습니다.
 
 - **Framework**: Next.js 14 (App Router)
 - **Language**: JavaScript (JSX) + React 18
-- **Styling**: 디자인 시스템 CSS (`app/globals.css`) — 별도 UI 라이브러리 없음
-- **Fonts**: Pretendard(본문) / Inter · JetBrains Mono(숫자·라벨)
+- **Styling**: 디자인 토큰 CSS(`app/globals.css`) + 화면별 인라인 스타일 — 별도 UI 라이브러리 없음
+- **Fonts**: Pretendard
+- **Layout**: 최대 480px 중앙 컬럼 · 하단 탭바(홈·채팅·등록·거래내역·마이) · 토스트
 - **Deploy**: Vercel
 
-## 화면 (Design codes)
+## 화면
 
-| 코드 | 경로 | 화면 |
-|------|------|------|
-| D-00 | `/login` | 로그인 |
-| D-07 | `/signup` | 회원가입 (이메일 인증 · 닉네임 중복확인 · 비밀번호 규칙) |
-| D-01 | `/` | 홈 피드 (물품 목록 · 상태 필터) |
-| D-02 | `/foods/[foodId]` | 물품 상세 (이미지 캐러셀 · 나눔 요청 모달 · 채팅) |
-| D-04 | `/register` | 물품 등록 (AI 소비기한 인식 · 사진 · 정원 스텝퍼) |
-| D-05 | (헤더 🔔) | 알림 드롭다운 (받은 요청 수락/거절 · 내 요청 결과) |
-| D-06 | `/transaction` | 거래 정보 (픽업 조율) |
-| D-08 | `/mypage` | 마이페이지 (내 물품 · 프로필 · 로그아웃/탈퇴) |
+| 경로 | 화면 |
+|------|------|
+| `/login` | 로그인 |
+| `/signup` | 회원가입 (이메일 → 6자리 코드 → 비밀번호·닉네임·주소, 3단계) |
+| `/` | 홈 피드 (마감 임박 나눔 · 더 둘러보기 · 상태 필터) |
+| `/foods/[foodId]` | 물품 상세 (이미지 · 나눔 요청 · 채팅 · 등록자 액션) |
+| `/foods/[foodId]/requests` | (등록자) 물품에 들어온 받은 요청 수락/거절 |
+| `/register` | 물품 등록 (AI 소비기한 인식 · 정원 스텝퍼 · 사진) |
+| `/requests` | 거래내역 (받은 요청 / 보낸 요청 탭) |
+| `/chat`, `/chat/[roomId]` | 채팅 목록 · 채팅방 |
+| `/mypage` | 마이페이지 (프로필 · 통계 · 메뉴 · 로그아웃/탈퇴) |
+| `/mypage/foods` | 내 등록 물품 |
+| `/mypage/edit` | 회원정보 수정 (닉네임 중복확인 · 주소 검색) |
+
+> **채팅**: 백엔드 명세에는 채팅방 생성/목록/이전 메시지 조회만 있고 '메시지 전송' 엔드포인트가
+> 없어, 목록·이전 메시지는 실제 API로 표시하되 메시지 전송은 화면상(로컬)에서만 반영됩니다.
+> 전송 API가 명세에 추가되면 `ChatRoomScreen`의 `send()`만 연결하면 됩니다.
 
 ## API 연동
 

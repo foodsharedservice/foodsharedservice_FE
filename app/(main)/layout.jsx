@@ -1,12 +1,15 @@
-import AppHeader from "@/components/AppHeader";
+"use client";
+
+import { ToastProvider } from "@/components/Toast";
+import TabBar from "@/components/TabBar";
 
 export default function MainLayout({ children }) {
   return (
-    <div className="app-shell">
-      <AppHeader />
-      <div className="app">
-        <main className="app-content">{children}</main>
+    <ToastProvider>
+      <div className="app-shell">
+        {children}
+        <TabBar />
       </div>
-    </div>
+    </ToastProvider>
   );
 }
