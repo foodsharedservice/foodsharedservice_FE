@@ -34,10 +34,15 @@ export default function HomeScreen() {
   const sortParam = sort === "expiring" ? "expired,asc" : "foodId,desc";
 
   const fetchPage = useCallback((pageNum, sortP) => {
-    return API.foods.list({ page: pageNum, size: PAGE_SIZE, sort: sortP }).then((data) => ({
-      content: data && Array.isArray(data.content) ? data.content : [],
-      hasNext: !!(data && data.hasNext),
-    }));
+    return API.foods.list({ page: pageNum, size: PAGE_SIZE, sort: sortP }).then((data) => {
+      const content = data && Array.isArray(data.content) ? data.content : [];
+      const total = (data && data.totalElements) || 0;
+      const hasNext =
+        data && typeof data.hasNext === "boolean"
+          ? data.hasNext
+          : (pageNum + 1) * PAGE_SIZE < total;
+      return { content, hasNext };
+    });
   }, []);
 
   const load = useCallback(() => {

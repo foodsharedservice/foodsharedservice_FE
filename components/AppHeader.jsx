@@ -2,17 +2,23 @@
 
 /* components/AppHeader.jsx — 상단 네비게이션 + 알림(받은 요청) 드롭다운 (실제 API 기반)
 
-   백엔드에 "내 물품 목록"/"통합 알림" API가 없으므로, 등록 시 기록해 둔 foodId
-   (localStorage)로 각 물품의 받은 요청(GET /foods/{id}/requests)을 집계해 보여준다.
-   수락/거절은 PATCH /foods/{foodId}/requests/{requestId}/(approve|reject). */
+   통합 알림 API가 없으므로, 내 물품 목록(GET /members/me/foods)으로 각 물품의
+   받은 요청(GET /foods/{id}/requests)을 집계해 보여준다.
+   수락/거절은 PATCH /requests/{requestFoodId}/(approve|reject). */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Icon from "@/components/icons";
 import { Avatar, Spinner } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
-import { getMyFoodIds } from "@/lib/localStore";
 import API from "@/lib/api";
+
+/* 내 물품 목록을 정규화해 [{ foodId, foodName }] 배열로 반환 */
+async function fetchMyFoods() {
+  const res = await API.foods.myFoods();
+  const list = Array.isArray(res) ? res : (res && res.content) || [];
+  return list.map((f) => ({ foodId: f.foodId, foodName: f.foodName }));
+}
 
 export default function AppHeader() {
   const router = useRouter();
@@ -32,11 +38,11 @@ export default function AppHeader() {
     let alive = true;
     (async () => {
       try {
-        const ids = getMyFoodIds(user.memberId);
-        if (!ids.length) { if (alive) setNotifCount(0); return; }
+        const foods = await fetchMyFoods();
+        if (!foods.length) { if (alive) setNotifCount(0); return; }
         const counts = await Promise.all(
-          ids.map((foodId) =>
-            API.requests.received(foodId)
+          foods.map((f) =>
+            API.requests.received(f.foodId)
               .then((rs) => (rs || []).filter((r) => r.status === "REQUEST").length)
               .catch(() => 0)
           )
@@ -88,7 +94,6 @@ export default function AppHeader() {
 
       {bellOpen && user && (
         <BellDropdown
-          memberId={user.memberId}
           onClose={() => setBellOpen(false)}
           onOpenFood={(foodId) => { setBellOpen(false); router.push(`/foods/${foodId}`); }}
         />
@@ -98,7 +103,7 @@ export default function AppHeader() {
 }
 
 /* ============ Bell Dropdown — 받은 나눔 요청 집계 ============ */
-function BellDropdown({ memberId, onClose, onOpenFood }) {
+function BellDropdown({ onClose, onOpenFood }) {
   const [received, setReceived] = useState(null); // null=loading
   const [error, setError] = useState(null);
   const ref = useRef(null);
@@ -117,18 +122,14 @@ function BellDropdown({ memberId, onClose, onOpenFood }) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const ids = getMyFoodIds(memberId);
-      if (!ids.length) { setReceived([]); return; }
+      const foods = await fetchMyFoods();
+      if (!foods.length) { setReceived([]); return; }
       const lists = await Promise.all(
-        ids.map((foodId) =>
-          API.foods.detail(foodId)
-            .then((food) =>
-              API.requests.received(foodId)
-                .then((rs) => (rs || [])
-                  .filter((r) => r.status === "REQUEST")
-                  .map((r) => ({ ...r, foodId, foodName: food.foodName })))
-                .catch(() => [])
-            )
+        foods.map((f) =>
+          API.requests.received(f.foodId)
+            .then((rs) => (rs || [])
+              .filter((r) => r.status === "REQUEST")
+              .map((r) => ({ ...r, foodId: f.foodId, foodName: f.foodName })))
             .catch(() => [])
         )
       );
@@ -137,13 +138,13 @@ function BellDropdown({ memberId, onClose, onOpenFood }) {
       setError(e);
       setReceived([]);
     }
-  }, [memberId]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const handle = (foodId, requestId, kind) => {
+  const handle = (requestId, kind) => {
     const fn = kind === "approve" ? API.requests.approve : API.requests.reject;
-    fn(foodId, requestId).catch(() => {});
+    fn(requestId).catch(() => {});
     setReceived((prev) => (prev || []).filter((r) => r.requestFoodId !== requestId));
   };
 
@@ -172,17 +173,17 @@ function BellDropdown({ memberId, onClose, onOpenFood }) {
             received.map((r) => (
               <div className="notif-card new" key={r.requestFoodId}>
                 <div className="notif-top">
-                  <Avatar name={`${r.memberId}`} size={32} />
+                  <Avatar name={r.requesterNickName || "?"} size={32} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="notif-line"><b>이웃 #{r.memberId}</b></div>
+                    <div className="notif-line"><b>{r.requesterNickName || "이웃"}</b></div>
                     <div className="notif-sub" onClick={() => onOpenFood(r.foodId)} style={{ cursor: "pointer" }}>
                       <b>{r.foodName}</b>에 나눔 요청 →
                     </div>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                  <button className="btn ghost sm" style={{ flex: 1 }} onClick={() => handle(r.foodId, r.requestFoodId, "reject")}>거절</button>
-                  <button className="btn primary sm" style={{ flex: 1.4 }} onClick={() => handle(r.foodId, r.requestFoodId, "approve")}>수락</button>
+                  <button className="btn ghost sm" style={{ flex: 1 }} onClick={() => handle(r.requestFoodId, "reject")}>거절</button>
+                  <button className="btn primary sm" style={{ flex: 1.4 }} onClick={() => handle(r.requestFoodId, "approve")}>수락</button>
                 </div>
                 <style>{notifCardStyles}</style>
               </div>

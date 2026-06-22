@@ -6,17 +6,14 @@
    DELETE /members/me                  회원 탈퇴
    POST   /auth/logout                 로그아웃
    DELETE /foods/{foodId}              내 물품 삭제
+   GET    /members/me/foods            내가 등록한 물품 목록 */
 
-   ※ 백엔드에 "내 물품 목록" API가 없어, 등록 시 기록해 둔 foodId(localStorage)로
-     GET /foods/{foodId} 상세를 모아 보여준다(삭제된 물품은 404로 자동 제외). */
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
 import { Photo, StatusBadge, Avatar, StateBox } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
 import AddressSearch from "@/components/AddressSearch";
-import { getMyFoodIds, untrackMyFood } from "@/lib/localStore";
 import API from "@/lib/api";
 
 const MY_FILTERS = [
@@ -36,43 +33,28 @@ export default function MyScreen() {
   const [filter, setFilter] = useState("ALL");
   const [editOpen, setEditOpen] = useState(false);
 
-  const loadFoods = useCallback((memberId) => {
-    const ids = getMyFoodIds(memberId);
-    if (!ids.length) { setFoods([]); return Promise.resolve(); }
-    return Promise.all(
-      ids.map((id) =>
-        API.foods.detail(id).catch((e) => {
-          if (e.status === 404) untrackMyFood(memberId, id); // 삭제된 물품 정리
-          return null;
-        })
-      )
-    ).then((list) => setFoods(list.filter(Boolean)));
-  }, []);
-
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.replace("/login"); return; }
     let alive = true;
     setLoading(true);
     setError(null);
-    API.members.me()
-      .then(async (me) => {
+    Promise.all([API.members.me(), API.foods.myFoods().catch(() => [])])
+      .then(([me, res]) => {
         if (!alive) return;
         setProfile(me);
-        await loadFoods(me.memberId);
+        const list = Array.isArray(res) ? res : (res && res.content) || [];
+        setFoods(list);
       })
       .catch((e) => { if (alive) setError(e); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [authLoading, user, router, loadFoods]);
+  }, [authLoading, user, router]);
 
   const removeFood = (foodId) => {
     if (!window.confirm("이 물품을 삭제할까요?")) return;
     API.foods.remove(foodId)
-      .then(() => {
-        untrackMyFood(profile && profile.memberId, foodId);
-        setFoods((prev) => prev.filter((f) => f.foodId !== foodId));
-      })
+      .then(() => setFoods((prev) => prev.filter((f) => f.foodId !== foodId)))
       .catch((e) => alert(e.message || "삭제에 실패했어요."));
   };
 
@@ -171,10 +153,10 @@ export default function MyScreen() {
           <div className="my-list">
             {filtered.map((f) => (
               <div className="my-row" key={f.foodId}>
-                <Photo label="냠냠" src={(f.imageUrls && f.imageUrls[0]) || undefined} ratio="1/1" />
+                <Photo label="냠냠" src={f.thumbnailUrl || undefined} ratio="1/1" />
                 <div className="my-row-body">
                   <div className="my-row-name">{f.foodName}</div>
-                  <div className="my-row-exp">소비기한 {f.expired}{f.region ? ` · ${f.region}` : ""}</div>
+                  <div className="my-row-exp">소비기한 {f.expired}</div>
                   <div className="my-row-tags">
                     <StatusBadge status={f.statusTx} />
                     <span className="badge incomplete" style={{ background: "var(--bg-2)" }}>
@@ -203,11 +185,6 @@ export default function MyScreen() {
               </div>
             )}
           </div>
-          {total > 0 && (
-            <p style={{ marginTop: 16, fontSize: 11, color: "var(--ink-4)", lineHeight: 1.6 }}>
-              ※ 이 목록은 이 브라우저에서 등록한 물품을 기준으로 보여줘요. (백엔드에 내 물품 목록 API가 없어요)
-            </p>
-          )}
         </div>
       </div>
 
