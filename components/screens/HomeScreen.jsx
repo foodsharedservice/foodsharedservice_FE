@@ -17,36 +17,62 @@ const FILTERS = [
   { id: "EXPIRED", label: "만료" },
 ];
 
+const PAGE_SIZE = 50; // 백엔드 최대 페이지 크기
+
 export default function HomeScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState("ALL");
   const [sort, setSort] = useState("recent");
   const [rows, setRows] = useState([]);
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+
+  // 정렬은 서버 sort 파라미터로 처리 (허용 필드: foodId, expired, capacity)
+  const sortParam = sort === "expiring" ? "expired,asc" : "foodId,desc";
+
+  const fetchPage = useCallback((pageNum, sortP) => {
+    return API.foods.list({ page: pageNum, size: PAGE_SIZE, sort: sortP }).then((data) => ({
+      content: data && Array.isArray(data.content) ? data.content : [],
+      hasNext: !!(data && data.hasNext),
+    }));
+  }, []);
 
   const load = useCallback(() => {
     let alive = true;
     setLoading(true);
     setError(null);
-    // status 없이 전체를 받아 클라이언트에서 필터/카운트 (탭 숫자 표시용)
-    API.foods.list({ page: 0, size: 100 })
-      .then((data) => {
+    fetchPage(0, sortParam)
+      .then(({ content, hasNext }) => {
         if (!alive) return;
-        setRows(data && Array.isArray(data.content) ? data.content : []);
+        setRows(content);
+        setPage(0);
+        setHasNext(hasNext);
       })
       .catch((e) => { if (alive) setError(e); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, []);
+  }, [fetchPage, sortParam]);
 
   useEffect(() => load(), [load]);
 
+  const loadMore = () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    fetchPage(page + 1, sortParam)
+      .then(({ content, hasNext }) => {
+        setRows((prev) => [...prev, ...content]);
+        setPage((p) => p + 1);
+        setHasNext(hasNext);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  };
+
   const inProgressCount = rows.filter((i) => i.statusTx === "IN_PROGRESS").length;
-  let items = rows.filter((it) => filter === "ALL" || it.statusTx === filter);
-  if (sort === "expiring") {
-    items = [...items].sort((a, b) => new Date(a.expired) - new Date(b.expired));
-  }
+  const items = rows.filter((it) => filter === "ALL" || it.statusTx === filter);
 
   return (
     <div className="home">
@@ -125,9 +151,13 @@ export default function HomeScreen() {
               <FoodCard key={it.foodId} item={it} onClick={() => router.push(`/foods/${it.foodId}`)} />
             ))}
           </div>
-          <div className="feed-foot">
-            <button className="btn ghost">더 보기</button>
-          </div>
+          {hasNext && (
+            <div className="feed-foot">
+              <button className="btn ghost" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "불러오는 중…" : "더 보기"}
+              </button>
+            </div>
+          )}
         </>
       )}
 

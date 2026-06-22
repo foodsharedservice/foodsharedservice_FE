@@ -1,15 +1,22 @@
 "use client";
 
-/* MyScreen.jsx — D-08 마이페이지
-   API: GET /members/me, GET /members/me/foods, DELETE /foods/{foodId},
-        DELETE /members/me, POST /auth/logout
-   실제 API 데이터만 사용. 비로그인 시 로그인으로 유도. */
+/* MyScreen.jsx — D-08 마이페이지 (실제 API)
+   GET    /members/me                  프로필
+   PATCH  /members/me                  정보 수정(닉네임/주소)
+   DELETE /members/me                  회원 탈퇴
+   POST   /auth/logout                 로그아웃
+   DELETE /foods/{foodId}              내 물품 삭제
 
-import { useState, useEffect } from "react";
+   ※ 백엔드에 "내 물품 목록" API가 없어, 등록 시 기록해 둔 foodId(localStorage)로
+     GET /foods/{foodId} 상세를 모아 보여준다(삭제된 물품은 404로 자동 제외). */
+
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
 import { Photo, StatusBadge, Avatar, StateBox } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
+import AddressSearch from "@/components/AddressSearch";
+import { getMyFoodIds, untrackMyFood } from "@/lib/localStore";
 import API from "@/lib/api";
 
 const MY_FILTERS = [
@@ -21,37 +28,52 @@ const MY_FILTERS = [
 
 export default function MyScreen() {
   const router = useRouter();
-  const { user, loading: authLoading, setUser } = useAuth();
+  const { user, loading: authLoading, setUser, refresh } = useAuth();
   const [profile, setProfile] = useState(null);
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("ALL");
+  const [editOpen, setEditOpen] = useState(false);
+
+  const loadFoods = useCallback((memberId) => {
+    const ids = getMyFoodIds(memberId);
+    if (!ids.length) { setFoods([]); return Promise.resolve(); }
+    return Promise.all(
+      ids.map((id) =>
+        API.foods.detail(id).catch((e) => {
+          if (e.status === 404) untrackMyFood(memberId, id); // 삭제된 물품 정리
+          return null;
+        })
+      )
+    ).then((list) => setFoods(list.filter(Boolean)));
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
+    if (!user) { router.replace("/login"); return; }
     let alive = true;
     setLoading(true);
     setError(null);
-    Promise.all([API.members.me(), API.members.myFoods().catch(() => [])])
-      .then(([me, fs]) => {
+    API.members.me()
+      .then(async (me) => {
         if (!alive) return;
         setProfile(me);
-        setFoods(Array.isArray(fs) ? fs : []);
+        await loadFoods(me.memberId);
       })
       .catch((e) => { if (alive) setError(e); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, loadFoods]);
 
   const removeFood = (foodId) => {
-    // DELETE /foods/{foodId} → status_tx INCOMPLETE (soft delete)
-    API.foods.remove(foodId).catch(() => {});
-    setFoods((prev) => prev.map((f) => (f.foodId === foodId ? { ...f, statusTx: "INCOMPLETE" } : f)));
+    if (!window.confirm("이 물품을 삭제할까요?")) return;
+    API.foods.remove(foodId)
+      .then(() => {
+        untrackMyFood(profile && profile.memberId, foodId);
+        setFoods((prev) => prev.filter((f) => f.foodId !== foodId));
+      })
+      .catch((e) => alert(e.message || "삭제에 실패했어요."));
   };
 
   const logout = async () => {
@@ -70,7 +92,7 @@ export default function MyScreen() {
   if (authLoading || (user && loading)) {
     return <div className="my"><StateBox kind="loading" title="내 정보를 불러오는 중…" /></div>;
   }
-  if (!user) return null; // 리다이렉트 중
+  if (!user) return null;
   if (error) {
     return (
       <div className="my">
@@ -116,15 +138,15 @@ export default function MyScreen() {
             )}
             <div className="my-stats">
               <div className="my-stat"><b>{total}</b><span>등록</span></div>
-              <div className="my-stat"><b>{activeCount}/10</b><span>활성</span></div>
+              <div className="my-stat"><b>{activeCount}</b><span>진행중</span></div>
               <div className="my-stat"><b>{completedCount}</b><span>완료</span></div>
             </div>
           </div>
 
           <nav className="my-menu">
             <button className="my-menu-item on"><Icon.Users /> 내가 등록한 물품</button>
-            <button className="my-menu-item"><Icon.Heart /> 받은 / 보낸 요청</button>
-            <button className="my-menu-item"><Icon.Pin /> 정보 수정</button>
+            <button className="my-menu-item" onClick={() => router.push("/chat")}><Icon.Chat /> 채팅 목록</button>
+            <button className="my-menu-item" onClick={() => setEditOpen(true)}><Icon.Pencil /> 정보 수정</button>
             <div className="my-menu-sep"></div>
             <button className="my-menu-item" onClick={logout}><Icon.ArrowRight /> 로그아웃</button>
             <button className="my-menu-item danger" onClick={withdraw}><Icon.Trash /> 회원 탈퇴</button>
@@ -135,7 +157,7 @@ export default function MyScreen() {
         <div>
           <div className="my-main-head">
             <div className="my-main-title">내가 등록한 물품</div>
-            <div className="my-main-count">총 {total}건 · 활성 {activeCount}건</div>
+            <div className="my-main-count">총 {total}건 · 진행중 {activeCount}건</div>
           </div>
 
           <div className="tab-row" style={{ marginBottom: 16 }}>
@@ -149,10 +171,10 @@ export default function MyScreen() {
           <div className="my-list">
             {filtered.map((f) => (
               <div className="my-row" key={f.foodId}>
-                <Photo label="냠냠" src={f.thumbnailUrl} ratio="1/1" />
+                <Photo label="냠냠" src={(f.imageUrls && f.imageUrls[0]) || undefined} ratio="1/1" />
                 <div className="my-row-body">
                   <div className="my-row-name">{f.foodName}</div>
-                  <div className="my-row-exp">소비기한 {f.expired}</div>
+                  <div className="my-row-exp">소비기한 {f.expired}{f.region ? ` · ${f.region}` : ""}</div>
                   <div className="my-row-tags">
                     <StatusBadge status={f.statusTx} />
                     <span className="badge incomplete" style={{ background: "var(--bg-2)" }}>
@@ -170,12 +192,100 @@ export default function MyScreen() {
             ))}
             {filtered.length === 0 && (
               <div style={{ padding: "60px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
-                {total === 0 ? "아직 등록한 물품이 없어요" : "해당하는 물품이 없어요"}
+                {total === 0 ? (
+                  <>
+                    아직 등록한 물품이 없어요
+                    <div style={{ marginTop: 14 }}>
+                      <button className="btn primary sm" onClick={() => router.push("/register")}>나눔 등록하기</button>
+                    </div>
+                  </>
+                ) : "해당하는 물품이 없어요"}
               </div>
             )}
           </div>
+          {total > 0 && (
+            <p style={{ marginTop: 16, fontSize: 11, color: "var(--ink-4)", lineHeight: 1.6 }}>
+              ※ 이 목록은 이 브라우저에서 등록한 물품을 기준으로 보여줘요. (백엔드에 내 물품 목록 API가 없어요)
+            </p>
+          )}
         </div>
       </div>
+
+      {editOpen && (
+        <EditProfileModal
+          profile={p}
+          onClose={() => setEditOpen(false)}
+          onSaved={async () => { setEditOpen(false); const me = await API.members.me().catch(() => null); if (me) setProfile(me); refresh && refresh(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ============ 정보 수정 모달 (PATCH /members/me) ============ */
+function EditProfileModal({ profile, onClose, onSaved }) {
+  const [nick, setNick] = useState(profile.nickName || "");
+  const [road, setRoad] = useState((profile.address && profile.address.roadAddress) || "");
+  const [detail, setDetail] = useState((profile.address && profile.address.detailAddress) || "");
+  const [addrOpen, setAddrOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const body = {};
+      if (nick && nick !== profile.nickName) body.nickName = nick;
+      if (road) body.address = { roadAddress: road, detailAddress: detail };
+      await API.members.update(body);
+      onSaved && onSaved();
+    } catch (e) {
+      const map = { NICKNAME_DUPLICATED: "이미 사용 중인 닉네임이에요.", VALIDATION_FAILED: "입력값을 확인해주세요. (닉네임 2~10자)" };
+      setError(map[e.code] || e.message || "수정에 실패했어요.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose} aria-label="닫기"><Icon.X /></button>
+        <div className="eyebrow" style={{ color: "var(--primary)" }}>EDIT PROFILE</div>
+        <h2 style={{ fontSize: 21, fontWeight: 800, marginTop: 4, marginBottom: 16 }}>정보 수정</h2>
+
+        <div className="label">닉네임 <span className="hint">2–10자</span></div>
+        <input className="field-input" value={nick} onChange={(e) => setNick(e.target.value)} maxLength={10} />
+
+        <div className="label" style={{ marginTop: 16 }}>주소</div>
+        <div className="verify-row">
+          <input className="field-input" value={road} readOnly onClick={() => setAddrOpen(true)} placeholder="도로명 주소 검색" style={{ cursor: "pointer" }} />
+          <button className="btn ghost" onClick={() => setAddrOpen(true)}>주소 검색</button>
+        </div>
+        <input className="field-input" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="상세주소 (선택)" style={{ marginTop: 8 }} />
+
+        {error && (
+          <div style={{ marginTop: 14, padding: "10px 12px", background: "#FBEAE5", border: "1px solid var(--danger-100)", borderRadius: 8, color: "var(--danger)", fontSize: 12.5 }}>{error}</div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+          <button className="btn ghost" style={{ flex: 1 }} onClick={onClose}>취소</button>
+          <button className="btn primary" style={{ flex: 2 }} onClick={save} disabled={busy}>{busy ? "저장 중…" : "저장하기"}</button>
+        </div>
+      </div>
+
+      <AddressSearch open={addrOpen} onClose={() => setAddrOpen(false)} onComplete={(data) => {
+        const building = data.buildingName && data.buildingName !== "N" ? ` (${data.buildingName})` : "";
+        setRoad((data.roadAddress || data.jibunAddress || "") + building);
+      }} />
+
+      <style>{`
+        .modal-scrim { position: fixed; inset: 0; background: rgba(31,29,24,0.45); backdrop-filter: blur(2px); z-index: 200; display: grid; place-items: center; padding: 20px; }
+        .modal { width: 100%; max-width: 440px; background: var(--surface); border-radius: 14px; padding: 28px; position: relative; box-shadow: var(--shadow-pop); }
+        .modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-3); }
+        .modal-close:hover { background: var(--bg-2); color: var(--ink); }
+      `}</style>
     </div>
   );
 }
