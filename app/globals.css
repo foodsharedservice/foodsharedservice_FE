@@ -964,7 +964,6 @@ ul, ol { list-style: none; }
   position: relative;
   display: flex;
   flex-direction: column;
-  flex: 1;
 }
 .app-content {
   flex: 1;
@@ -983,7 +982,8 @@ ul, ol { list-style: none; }
     var(--bg);
 }
 .viewport.mobile .device {
-  width: 412px;
+  flex: 0 0 auto; /* 부모 flex 컨테이너에서 가로로 늘어나지 않도록 (고정 폭 유지) */
+  width: 640px;
   max-width: 100%;
   min-height: calc(100vh - 48px);
   background: var(--surface);
@@ -1000,7 +1000,7 @@ ul, ol { list-style: none; }
 }
 
 /* 실제 모바일 단말에서는 풀블리드 */
-@media (max-width: 460px) {
+@media (max-width: 680px) {
   .viewport.mobile { padding: 0; }
   .viewport.mobile .device {
     width: 100%;
