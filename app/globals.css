@@ -954,58 +954,67 @@ ul, ol { list-style: none; }
 .viewport.mobile .tx-actions .btn { width: 100%; }
 
 /* =========================================================
-   데스크톱 중앙정렬 컨테이너 (무신사형 넓은 웹 레이아웃)
-   헤더는 풀폭으로 두고, 콘텐츠는 가운데 정렬된 고정 max-width 로 묶는다.
-   초광폭 모니터에서도 컨테이너 폭이 고정되어 레이아웃이 일정하게 유지된다.
+   고정 모바일 뷰 프레임 (번개장터 모바일형)
+   화면 해상도와 무관하게 가운데 정렬된 좁은 모바일 컬럼으로 고정한다.
+   앱 전체를 .viewport.mobile > .device 로 감싸 디자인 시스템의
+   모바일 레이아웃 규칙(.viewport.mobile .xxx)을 항상 활성화한다.
+   폭은 --frame-w 한 줄로 조정 가능.
    ========================================================= */
-:root { --container-w: 1200px; }
+:root { --frame-w: 480px; }
 
 .app-shell {
   position: relative;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
 }
 .app-content {
   flex: 1;
   width: 100%;
-  max-width: var(--container-w);
-  margin: 0 auto;
 }
 
-/* 인증(로그인/회원가입) 페이지 — 가운데 정렬 카드형 */
-.auth-shell {
+.viewport.mobile {
   min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 32px 16px;
+  align-items: flex-start;
+  padding: 24px 16px;
   background:
     radial-gradient(1100px 600px at 50% -10%, #F2EDDF 0%, transparent 60%),
     var(--bg);
 }
-.auth-shell .auth {
-  width: 100%;
-  max-width: 1040px;
-  min-height: 0;
+.viewport.mobile .device {
+  flex: 0 0 auto; /* 부모 flex 컨테이너에서 가로로 늘어나지 않도록 (고정 폭 유지) */
+  width: var(--frame-w);
+  max-width: 100%;
+  min-height: calc(100vh - 48px);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 20px;
-  overflow: hidden;
-  box-shadow: var(--shadow-pop);
-  background: var(--surface);
+  box-shadow: 0 18px 50px rgba(31, 29, 24, 0.10), 0 4px 12px rgba(31, 29, 24, 0.05);
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
+/* 프레임 상단 라운드 처리 (헤더/인증 패널) */
+.viewport.mobile .device > .app-header,
+.viewport.mobile .device > .auth {
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+}
+.viewport.mobile .device > .auth { overflow: hidden; }
 
-/* 좁은 화면: 인증 페이지를 단일 컬럼 풀스크린으로 */
-@media (max-width: 760px) {
-  .auth-shell { padding: 0; }
-  .auth-shell .auth {
-    grid-template-columns: 1fr;
+/* 실제 모바일 단말에서는 풀블리드 */
+@media (max-width: 520px) {
+  .viewport.mobile { padding: 0; }
+  .viewport.mobile .device {
+    width: 100%;
     min-height: 100vh;
     border: none;
     border-radius: 0;
     box-shadow: none;
   }
-  .auth-shell .auth .auth-brandpane { padding: 24px 20px; }
-  .auth-shell .auth .auth-pane-cards { display: none; }
+  .viewport.mobile .device > .app-header,
+  .viewport.mobile .device > .auth {
+    border-radius: 0;
+  }
 }
