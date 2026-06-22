@@ -63,7 +63,7 @@ export default function ChatRoomScreen({ roomId }) {
   };
 
   return (
-    <div>
+    <div className="screen">
       <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "12px 8px", position: "sticky", top: 0, zIndex: 20, background: "rgba(251,250,248,.95)", backdropFilter: "blur(10px)", borderBottom: "1px solid #F0ECE6" }}>
         <button onClick={() => router.back()} aria-label="뒤로" style={{ width: 40, height: 40, border: "none", background: "transparent", display: "grid", placeItems: "center", cursor: "pointer" }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F1D1B" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>

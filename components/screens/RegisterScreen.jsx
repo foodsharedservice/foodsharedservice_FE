@@ -111,7 +111,7 @@ export default function RegisterScreen() {
   if (authLoading || !user) return null;
 
   return (
-    <div>
+    <div className="screen">
       <input ref={expInputRef} type="file" accept="image/*" hidden onChange={onPickExpired} />
       <input ref={imgInputRef} type="file" accept="image/*" multiple hidden onChange={onPickImages} />
 

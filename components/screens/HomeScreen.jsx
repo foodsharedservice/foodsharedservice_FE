@@ -51,7 +51,7 @@ export default function HomeScreen() {
     .slice(0, 6);
 
   return (
-    <div style={{ minHeight: "100dvh" }}>
+    <div className="screen wide" style={{ minHeight: "100dvh" }}>
       {/* ===== 상단 헤더 ===== */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 10px", position: "sticky", top: 0, zIndex: 20, background: "rgba(251,250,248,.88)", backdropFilter: "blur(12px)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
@@ -113,7 +113,9 @@ export default function HomeScreen() {
             {feed.length === 0 ? (
               <StateBox kind="empty" title="해당하는 물품이 없어요" sub="다른 필터를 선택하거나 첫 나눔을 등록해보세요." />
             ) : (
-              feed.map((f) => <FeedRow key={f.foodId} item={f} onClick={() => router.push(`/foods/${f.foodId}`)} />)
+              <div className="feed-list">
+                {feed.map((f) => <FeedRow key={f.foodId} item={f} onClick={() => router.push(`/foods/${f.foodId}`)} />)}
+              </div>
             )}
           </div>
         </>

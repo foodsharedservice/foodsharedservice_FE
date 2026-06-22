@@ -38,12 +38,12 @@ export default function DetailScreen({ foodId }) {
   useEffect(() => load(), [load]);
 
   if (loading) {
-    return <div><ScreenHeader onBack={() => router.back()} title="" /><StateBox kind="loading" title="물품 정보를 불러오는 중…" /></div>;
+    return <div className="screen"><ScreenHeader onBack={() => router.back()} title="" /><StateBox kind="loading" title="물품 정보를 불러오는 중…" /></div>;
   }
   if (error || !d) {
     const notFound = error && error.status === 404;
     return (
-      <div>
+      <div className="screen">
         <ScreenHeader onBack={() => router.push("/")} title="" />
         <StateBox kind="error" title={notFound ? "존재하지 않는 물품이에요" : "물품 정보를 불러오지 못했어요"} sub={notFound ? "삭제되었거나 잘못된 주소일 수 있어요." : `서버에 연결할 수 없습니다. (${(error && (error.code || error.status || error.message)) || "네트워크 오류"})`} onRetry={notFound ? undefined : load} />
       </div>
@@ -85,7 +85,7 @@ export default function DetailScreen({ foodId }) {
   };
 
   return (
-    <div>
+    <div className="screen">
       {/* 헤더 */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 8px", position: "sticky", top: 0, zIndex: 20, background: "rgba(251,250,248,.9)", backdropFilter: "blur(10px)" }}>
         <button onClick={() => router.back()} aria-label="뒤로" style={hdrBtn}>

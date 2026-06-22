@@ -58,18 +58,18 @@ export default function MyScreen() {
   };
 
   if (authLoading || (user && loading)) {
-    return <div><StateBox kind="loading" title="내 정보를 불러오는 중…" /></div>;
+    return <div className="screen"><StateBox kind="loading" title="내 정보를 불러오는 중…" /></div>;
   }
   if (!user) return null;
   if (error) {
-    return <div><StateBox kind="error" title="내 정보를 불러오지 못했어요" sub={`(${error.code || error.status || error.message || "네트워크 오류"})`} onRetry={() => router.refresh()} /></div>;
+    return <div className="screen"><StateBox kind="error" title="내 정보를 불러오지 못했어요" sub={`(${error.code || error.status || error.message || "네트워크 오류"})`} onRetry={() => router.refresh()} /></div>;
   }
 
   const p = profile || user;
   const addr = (p.address && (p.address.roadAddress || "")) || "";
 
   return (
-    <div style={{ minHeight: "100dvh" }}>
+    <div className="screen" style={{ minHeight: "100dvh" }}>
       <div style={{ padding: "16px 18px 12px" }}><div style={{ fontSize: 21, fontWeight: 800 }}>마이</div></div>
 
       {/* 프로필 카드 */}

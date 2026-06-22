@@ -71,7 +71,7 @@ export default function RequestsScreen() {
   if (authLoading || !user) return null;
 
   return (
-    <div style={{ minHeight: "100dvh" }}>
+    <div className="screen" style={{ minHeight: "100dvh" }}>
       {/* 헤더 + 세그먼트 */}
       <div style={{ padding: "16px 18px 10px", position: "sticky", top: 0, zIndex: 20, background: "rgba(251,250,248,.92)", backdropFilter: "blur(10px)" }}>
         <div style={{ fontSize: 21, fontWeight: 800, marginBottom: 14 }}>거래내역</div>
