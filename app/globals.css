@@ -960,7 +960,7 @@ ul, ol { list-style: none; }
    홈 4열 그리드 / 상세·등록 2단 / 마이 사이드바 등 기본(데스크톱) 배치 사용.
    폭은 --container-w 한 줄로 조정 가능.
    ========================================================= */
-:root { --container-w: 1200px; }
+:root { --container-w: 1080px; }
 
 .app-shell {
   position: relative;
@@ -1125,3 +1125,11 @@ body {
     linear-gradient(160deg, var(--primary) 0%, var(--primary-700) 100%);
 }
 .auth-brandpane .logo::before { background: var(--accent); }
+
+/* 헤더 콘텐츠도 중앙 콘텐츠 컬럼에 맞춰 정렬 (배경은 풀폭 유지) — 네이버/번개장터형 */
+.app-header {
+  padding-inline: max(32px, calc((100% - var(--container-w)) / 2));
+}
+@media (max-width: 900px) {
+  .app-header { padding-inline: 16px; }
+}
