@@ -2,69 +2,134 @@
 
 /* RegisterScreen.jsx — D-04 물품 등록
    API 1: POST /foods/expired-date  (multipart: expiredImage) → { expiredImageId, expired, accessUrl }
-   API 2: POST /foods               (multipart: request JSON + images[]) */
+   API 2: POST /foods               (multipart: request JSON + images[])
+   실제 파일 업로드 + 실제 API 호출. */
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
-import { Photo } from "@/components/ui";
+import { Photo, FormError } from "@/components/ui";
+import { useAuth } from "@/components/AuthProvider";
 import API from "@/lib/api";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const [aiState, setAiState] = useState("empty"); // empty | loading | done
-  const [expDate, setExpDate] = useState("2026-06-25");
-  const [expiredImageId, setExpiredImageId] = useState(12);
-  const [foodName, setFoodName] = useState("참치캔 6개입 (미개봉)");
-  const [capacity, setCapacity] = useState(3);
-  const [details, setDetails] = useState(
-    "동생이 사놓고 안 먹어서 나눔합니다. 박스째로 가져가셔도 좋고, 한 캔만 필요해도 환영해요. 모두 미개봉이고 직사광선 안 닿는 곳에 보관했습니다."
-  );
-  const [photos, setPhotos] = useState([
-    { id: 1, label: "front", emoji: "🐟" },
-    { id: 2, label: "back", emoji: "📷" },
-  ]);
+  const { user, loading: authLoading } = useAuth();
+  const expInputRef = useRef(null);
+  const imgInputRef = useRef(null);
 
-  const runAI = () => {
+  const [aiState, setAiState] = useState("empty"); // empty | loading | done | error
+  const [expDate, setExpDate] = useState(null);
+  const [expiredImageId, setExpiredImageId] = useState(null);
+  const [expPreview, setExpPreview] = useState(null);
+  const [aiError, setAiError] = useState(null);
+
+  const [foodName, setFoodName] = useState("");
+  const [capacity, setCapacity] = useState(3);
+  const [details, setDetails] = useState("");
+  const [photos, setPhotos] = useState([]); // { id, url, file }
+  const [submitError, setSubmitError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace("/login");
+  }, [authLoading, user, router]);
+
+  const onPickExpired = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setExpPreview(URL.createObjectURL(file));
     setAiState("loading");
+    setAiError(null);
     // POST /foods/expired-date (multipart: expiredImage) → { expiredImageId, accessUrl, expired }
-    API.foods.recognizeExpiry(null)
+    API.foods.recognizeExpiry(file)
       .then((data) => {
-        if (data && data.expired) setExpDate(data.expired);
-        if (data && data.expiredImageId) setExpiredImageId(data.expiredImageId);
+        if (data && data.expired && data.expiredImageId != null) {
+          setExpDate(data.expired);
+          setExpiredImageId(data.expiredImageId);
+          if (data.accessUrl) setExpPreview(data.accessUrl);
+          setAiState("done");
+        } else {
+          setAiState("error");
+          setAiError("소비기한을 인식하지 못했어요. 다시 시도해주세요.");
+        }
       })
-      .catch(() => {});
-    setTimeout(() => setAiState("done"), 1400);
+      .catch((err) => {
+        const map = {
+          EXPIRED_DATE_NOT_DETECTED: "소비기한을 인식하지 못했어요. 더 선명한 사진으로 다시 시도해주세요.",
+          AI_REQUEST_FAILED: "AI 인식 요청에 실패했어요. 잠시 후 다시 시도해주세요.",
+          FILE_TOO_LARGE: "파일 용량이 너무 커요 (최대 10MB).",
+          UNSUPPORTED_FILE_TYPE: "지원하지 않는 파일 형식이에요.",
+        };
+        setAiState("error");
+        setAiError(map[err.code] || err.message || "인식에 실패했어요.");
+      })
+      .finally(() => { if (e.target) e.target.value = ""; });
   };
 
-  const submitFood = () => {
-    // POST /foods (multipart: request{foodName,expiredImageId,capacity,details} + images[])
-    API.foods.create({ foodName, expiredImageId, capacity, details, images: [] })
-      .then(() => router.push("/"))
-      .catch(() => router.push("/"));
+  const resetExpired = () => {
+    setAiState("empty");
+    setExpDate(null);
+    setExpiredImageId(null);
+    setExpPreview(null);
+    setAiError(null);
+  };
+
+  const onPickImages = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setPhotos((prev) => {
+      const room = Math.max(0, 4 - prev.length);
+      const added = files.slice(0, room).map((file) => ({ id: `${Date.now()}-${file.name}-${Math.random()}`, url: URL.createObjectURL(file), file }));
+      return [...prev, ...added];
+    });
+    if (e.target) e.target.value = "";
   };
 
   const removePhoto = (id) => setPhotos((prev) => prev.filter((p) => p.id !== id));
-  const addPhoto = () => {
-    if (photos.length >= 4) return;
-    const emojis = ["🥫", "📦", "🏷️", "🍱"];
-    setPhotos((prev) => [
-      ...prev,
-      { id: Date.now(), label: `photo ${prev.length + 1}`, emoji: emojis[prev.length % emojis.length] },
-    ]);
+
+  const canSubmit = aiState === "done" && expiredImageId != null && foodName.trim().length > 0 && !busy;
+
+  const submitFood = async () => {
+    if (!canSubmit) return;
+    setSubmitError(null);
+    setBusy(true);
+    try {
+      // POST /foods (multipart: request + images[])
+      await API.foods.create({
+        foodName: foodName.trim(),
+        expiredImageId,
+        capacity,
+        details,
+        images: photos.map((p) => p.file),
+      });
+      router.push("/");
+    } catch (err) {
+      const map = {
+        FOOD_LIMIT_EXCEEDED: "활성 물품은 최대 10개까지 등록할 수 있어요.",
+        EXPIRED_IMAGE_REQUIRED: "소비기한 사진을 먼저 등록해주세요.",
+        EXPIRED_IMAGE_NOT_FOUND: "소비기한 이미지를 다시 등록해주세요.",
+        FILE_TOO_LARGE: "사진 용량이 너무 커요.",
+        UNSUPPORTED_FILE_TYPE: "지원하지 않는 사진 형식이에요.",
+      };
+      setSubmitError(map[err.code] || err.message || "등록에 실패했어요.");
+    } finally {
+      setBusy(false);
+    }
   };
+
+  if (authLoading || !user) return null;
 
   return (
     <div className="register">
+      <input ref={expInputRef} type="file" accept="image/*" hidden onChange={onPickExpired} />
+      <input ref={imgInputRef} type="file" accept="image/*" multiple hidden onChange={onPickImages} />
+
       <div className="register-head">
         <button className="crumb-back" onClick={() => router.push("/")}>
           <Icon.ChevronLeft /> 돌아가기
         </button>
         <h1 className="register-title">물품 등록</h1>
-        <div className="register-quota">
-          <span className="eyebrow">ACTIVE</span>
-          <span className="quota-num"><b className="font-en">3</b> / 10</span>
-        </div>
       </div>
 
       <div className="register-grid">
@@ -83,18 +148,17 @@ export default function RegisterScreen() {
             </p>
 
             <div className="exp-upload">
-              {aiState === "empty" && (
-                <button className="exp-empty" onClick={runAI}>
+              {aiState === "empty" || aiState === "error" ? (
+                <button className="exp-empty" onClick={() => expInputRef.current?.click()}>
                   <Icon.Camera />
                   <div className="exp-empty-title">소비기한 사진을 올려주세요</div>
                   <div className="exp-empty-sub">JPG · PNG · 최대 10MB</div>
                   <div className="btn primary sm" style={{ marginTop: 14 }}>파일 선택</div>
                 </button>
-              )}
-              {aiState !== "empty" && (
+              ) : (
                 <div className="exp-shot">
-                  <Photo label="exp.jpg" emoji="📅" className="exp-photo-bg" />
-                  <button className="exp-replace" onClick={() => setAiState("empty")}>다시 올리기</button>
+                  <Photo label="소비기한 사진" src={expPreview} className="exp-photo-bg" />
+                  <button className="exp-replace" onClick={resetExpired}>다시 올리기</button>
                 </div>
               )}
             </div>
@@ -116,6 +180,15 @@ export default function RegisterScreen() {
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>AI가 소비기한을 읽는 중…</div>
                     <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>보통 2-5초 정도 걸려요</div>
+                  </div>
+                </div>
+              )}
+              {aiState === "error" && (
+                <div className="ai-empty">
+                  <div className="ai-icon" style={{ background: "var(--danger)" }}><Icon.X /></div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: "var(--danger)" }}>인식 실패</div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>{aiError}</div>
                   </div>
                 </div>
               )}
@@ -149,12 +222,12 @@ export default function RegisterScreen() {
             <div className="photo-grid">
               {photos.map((p) => (
                 <div className="reg-photo" key={p.id}>
-                  <Photo label={p.label} emoji={p.emoji} ratio="1/1" />
+                  <Photo label="" src={p.url} ratio="1/1" />
                   <button className="reg-photo-del" onClick={() => removePhoto(p.id)} aria-label="삭제"><Icon.X /></button>
                 </div>
               ))}
               {photos.length < 4 && (
-                <button className="reg-photo-add" onClick={addPhoto}>
+                <button className="reg-photo-add" onClick={() => imgInputRef.current?.click()}>
                   <Icon.Plus />
                   <span>추가</span>
                 </button>
@@ -215,10 +288,12 @@ export default function RegisterScreen() {
             </div>
           </div>
 
+          <FormError>{submitError}</FormError>
+
           <div className="register-cta">
             <button className="btn ghost lg" onClick={() => router.push("/")}>취소</button>
-            <button className="btn primary lg" style={{ flex: 1 }} disabled={aiState !== "done"} onClick={submitFood}>
-              {aiState !== "done" ? "소비기한 사진을 먼저 올려주세요" : "등록하기"}
+            <button className="btn primary lg" style={{ flex: 1 }} disabled={!canSubmit} onClick={submitFood}>
+              {busy ? "등록 중…" : aiState !== "done" ? "소비기한 사진을 먼저 올려주세요" : foodName.trim() ? "등록하기" : "물품 이름을 입력해주세요"}
             </button>
           </div>
         </div>
@@ -228,9 +303,6 @@ export default function RegisterScreen() {
         .register { padding-bottom: 60px; }
         .register-head { display: flex; align-items: center; gap: 16px; padding: 16px 32px; max-width: 1280px; margin: 0 auto; }
         .register-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
-        .register-quota { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--bg-2); border-radius: 999px; }
-        .quota-num { font-size: 13px; font-family: var(--font-en); color: var(--ink-3); }
-        .quota-num b { color: var(--primary); font-weight: 700; }
         .register-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 0 32px; max-width: 1280px; margin: 0 auto; }
         .register-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 22px 24px; margin-bottom: 16px; box-shadow: var(--shadow-card); }
         .card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
@@ -246,11 +318,10 @@ export default function RegisterScreen() {
         .exp-empty-sub { font-size: 11.5px; color: var(--ink-4); font-family: var(--font-en); }
         .exp-shot { position: relative; }
         .exp-shot .ph { aspect-ratio: 4/3; }
-        .exp-shot .exp-photo-bg { background: repeating-linear-gradient(135deg, var(--accent-100) 0 12px, var(--accent-50) 12px 24px); }
         .exp-replace { position: absolute; top: 10px; right: 10px; padding: 5px 10px; background: rgba(31,29,24,0.78); color: var(--bg); border-radius: 6px; font-size: 11.5px; font-weight: 600; backdrop-filter: blur(6px); }
         .exp-replace:hover { background: var(--ink); }
         .ai-result { border-radius: 10px; padding: 14px 16px; transition: all 0.2s ease; }
-        .ai-result.empty { background: var(--bg-2); border: 1px dashed var(--line-2); }
+        .ai-result.empty, .ai-result.error { background: var(--bg-2); border: 1px dashed var(--line-2); }
         .ai-result.loading { background: var(--primary-50); border: 1px solid var(--primary-100); }
         .ai-result.done { background: linear-gradient(135deg, var(--accent-50), var(--surface-2)); border: 1px solid var(--accent-100); }
         .ai-empty, .ai-loading { display: flex; align-items: center; gap: 12px; }

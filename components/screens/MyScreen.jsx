@@ -1,32 +1,16 @@
 "use client";
 
 /* MyScreen.jsx — D-08 마이페이지
-   API: GET /members/me, PATCH /members/me, DELETE /members/me,
-        GET /members/me/foods, DELETE /foods/{foodId}, POST /auth/logout */
+   API: GET /members/me, GET /members/me/foods, DELETE /foods/{foodId},
+        DELETE /members/me, POST /auth/logout
+   실제 API 데이터만 사용. 비로그인 시 로그인으로 유도. */
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
-import { Photo, StatusBadge, Avatar } from "@/components/ui";
+import { Photo, StatusBadge, Avatar, StateBox } from "@/components/ui";
+import { useAuth } from "@/components/AuthProvider";
 import API from "@/lib/api";
-
-const MY_PROFILE = {
-  memberId: 1,
-  nickName: "나눔러",
-  email: "nanumlover@example.com",
-  address: { roadAddress: "서울 서초구", detailAddress: "101동 202호" },
-  createdAt: "2026-03-12",
-  shareCount: 12,
-  receiveCount: 7,
-};
-
-const MY_FOODS = [
-  { foodId: 1, foodName: "참치캔 6개입 (미개봉)", expired: "2026-06-25", approvedCount: 1, capacity: 3, statusTx: "IN_PROGRESS", emoji: "🐟" },
-  { foodId: 2, foodName: "스팸 클래식 200g x 4", expired: "2026-07-15", approvedCount: 0, capacity: 2, statusTx: "IN_PROGRESS", emoji: "🥫" },
-  { foodId: 3, foodName: "오뚜기 카레 (백미)", expired: "2026-08-02", approvedCount: 1, capacity: 1, statusTx: "COMPLETED", emoji: "🍛" },
-  { foodId: 4, foodName: "농심 신라면 5개입", expired: "2026-06-02", approvedCount: 0, capacity: 5, statusTx: "EXPIRED", emoji: "🍜" },
-  { foodId: 12, foodName: "녹차티백 100개입", expired: "2027-01-30", approvedCount: 0, capacity: 5, statusTx: "INCOMPLETE", emoji: "🍵" },
-];
 
 const MY_FILTERS = [
   { id: "ALL", label: "전체" },
@@ -37,17 +21,32 @@ const MY_FILTERS = [
 
 export default function MyScreen() {
   const router = useRouter();
-  const [foods, setFoods] = useState(MY_FOODS);
+  const { user, loading: authLoading, setUser } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const [foods, setFoods] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState("ALL");
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
     let alive = true;
-    // GET /members/me/foods
-    API.members.myFoods()
-      .then((data) => { if (alive && Array.isArray(data) && data.length) setFoods(data); })
-      .catch(() => {});
+    setLoading(true);
+    setError(null);
+    Promise.all([API.members.me(), API.members.myFoods().catch(() => [])])
+      .then(([me, fs]) => {
+        if (!alive) return;
+        setProfile(me);
+        setFoods(Array.isArray(fs) ? fs : []);
+      })
+      .catch((e) => { if (alive) setError(e); })
+      .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, []);
+  }, [authLoading, user, router]);
 
   const removeFood = (foodId) => {
     // DELETE /foods/{foodId} → status_tx INCOMPLETE (soft delete)
@@ -55,19 +54,45 @@ export default function MyScreen() {
     setFoods((prev) => prev.map((f) => (f.foodId === foodId ? { ...f, statusTx: "INCOMPLETE" } : f)));
   };
 
-  const logout = () => {
-    API.auth.logout().catch(() => {});
+  const logout = async () => {
+    try { await API.auth.logout(); } catch {}
+    setUser(null);
     router.push("/login");
   };
+
+  const withdraw = async () => {
+    if (!window.confirm("정말 탈퇴하시겠어요? 탈퇴한 이메일은 재가입할 수 없어요.")) return;
+    try { await API.members.remove(); } catch {}
+    setUser(null);
+    router.push("/login");
+  };
+
+  if (authLoading || (user && loading)) {
+    return <div className="my"><StateBox kind="loading" title="내 정보를 불러오는 중…" /></div>;
+  }
+  if (!user) return null; // 리다이렉트 중
+  if (error) {
+    return (
+      <div className="my">
+        <StateBox kind="error" title="내 정보를 불러오지 못했어요"
+          sub={`서버에 연결할 수 없습니다. (${error.code || error.status || error.message || "네트워크 오류"})`}
+          onRetry={() => router.refresh()} />
+      </div>
+    );
+  }
+
+  const p = profile || user;
+  const total = foods.length;
+  const activeCount = foods.filter((f) => f.statusTx === "IN_PROGRESS").length;
+  const completedCount = foods.filter((f) => f.statusTx === "COMPLETED").length;
+  const addr = p.address ? (p.address.roadAddress || "") : "";
+  const joined = p.createdAt ? String(p.createdAt).slice(0, 10) : "";
 
   const filtered = foods.filter((f) => {
     if (filter === "ALL") return true;
     if (filter === "DONE") return f.statusTx === "EXPIRED" || f.statusTx === "INCOMPLETE";
     return f.statusTx === filter;
   });
-
-  const activeCount = foods.filter((f) => f.statusTx === "IN_PROGRESS").length;
-  const p = MY_PROFILE;
 
   return (
     <div className="my">
@@ -86,11 +111,13 @@ export default function MyScreen() {
                 <div className="my-profile-mail">{p.email}</div>
               </div>
             </div>
-            <div className="my-profile-addr">{p.address.roadAddress} · 가입 {p.createdAt}</div>
+            {(addr || joined) && (
+              <div className="my-profile-addr">{addr}{addr && joined ? " · " : ""}{joined && `가입 ${joined}`}</div>
+            )}
             <div className="my-stats">
-              <div className="my-stat"><b>{p.shareCount}</b><span>나눔</span></div>
-              <div className="my-stat"><b>{p.receiveCount}</b><span>받음</span></div>
+              <div className="my-stat"><b>{total}</b><span>등록</span></div>
               <div className="my-stat"><b>{activeCount}/10</b><span>활성</span></div>
+              <div className="my-stat"><b>{completedCount}</b><span>완료</span></div>
             </div>
           </div>
 
@@ -100,7 +127,7 @@ export default function MyScreen() {
             <button className="my-menu-item"><Icon.Pin /> 정보 수정</button>
             <div className="my-menu-sep"></div>
             <button className="my-menu-item" onClick={logout}><Icon.ArrowRight /> 로그아웃</button>
-            <button className="my-menu-item danger"><Icon.Trash /> 회원 탈퇴</button>
+            <button className="my-menu-item danger" onClick={withdraw}><Icon.Trash /> 회원 탈퇴</button>
           </nav>
         </aside>
 
@@ -108,7 +135,7 @@ export default function MyScreen() {
         <div>
           <div className="my-main-head">
             <div className="my-main-title">내가 등록한 물품</div>
-            <div className="my-main-count">총 {foods.length}건 · 활성 {activeCount}건</div>
+            <div className="my-main-count">총 {total}건 · 활성 {activeCount}건</div>
           </div>
 
           <div className="tab-row" style={{ marginBottom: 16 }}>
@@ -122,7 +149,7 @@ export default function MyScreen() {
           <div className="my-list">
             {filtered.map((f) => (
               <div className="my-row" key={f.foodId}>
-                <Photo label="" emoji={f.emoji} ratio="1/1" />
+                <Photo label="냠냠" src={f.thumbnailUrl} ratio="1/1" />
                 <div className="my-row-body">
                   <div className="my-row-name">{f.foodName}</div>
                   <div className="my-row-exp">소비기한 {f.expired}</div>
@@ -135,7 +162,6 @@ export default function MyScreen() {
                 </div>
                 <div className="my-row-actions">
                   <button className="btn ghost sm" onClick={() => router.push(`/foods/${f.foodId}`)}>보기</button>
-                  {f.statusTx === "IN_PROGRESS" && <button className="btn ghost sm">수정</button>}
                   {(f.statusTx === "IN_PROGRESS" || f.statusTx === "EXPIRED") && (
                     <button className="btn danger-ghost sm" onClick={() => removeFood(f.foodId)}>삭제</button>
                   )}
@@ -144,7 +170,7 @@ export default function MyScreen() {
             ))}
             {filtered.length === 0 && (
               <div style={{ padding: "60px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
-                해당하는 물품이 없어요
+                {total === 0 ? "아직 등록한 물품이 없어요" : "해당하는 물품이 없어요"}
               </div>
             )}
           </div>

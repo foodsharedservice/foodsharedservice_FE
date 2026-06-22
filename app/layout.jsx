@@ -1,4 +1,5 @@
 import "./globals.css";
+import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata = {
   title: "냠냠 · 음식 나눔 서비스",
@@ -30,7 +31,9 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
