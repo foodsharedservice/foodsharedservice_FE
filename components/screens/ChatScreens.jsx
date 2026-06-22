@@ -275,13 +275,13 @@ export function ChatRoomScreen({ roomId }) {
         .cr-status { font-size: 11px; font-weight: 600; color: var(--ink-4); white-space: nowrap; }
         .cr-status.connected { color: var(--primary); }
         .cr-status.error, .cr-status.disconnected { color: var(--danger); }
-        .chat-scroll { flex: 1; overflow-y: auto; padding: 16px; background: var(--bg); display: flex; flex-direction: column; gap: 10px; }
+        .chat-scroll { flex: 1; overflow-y: auto; padding: 16px; margin: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 10px; }
         .load-older { display: flex; justify-content: center; padding-bottom: 6px; }
         .bubble-row { display: flex; gap: 8px; align-items: flex-end; max-width: 78%; }
         .bubble-row.mine { align-self: flex-end; flex-direction: row-reverse; }
         .bubble-wrap { min-width: 0; }
         .bubble-name { font-size: 11px; color: var(--ink-4); margin-bottom: 3px; margin-left: 2px; }
-        .bubble { padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.45; background: var(--surface); border: 1px solid var(--line); color: var(--ink); word-break: break-word; white-space: pre-wrap; }
+        .bubble { padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.45; background: var(--bg-2); border: 1px solid var(--line); color: var(--ink); word-break: break-word; white-space: pre-wrap; }
         .bubble-row.mine .bubble { background: var(--primary); color: #FBF9F2; border-color: var(--primary); }
         .bubble-time { font-size: 10px; color: var(--ink-5); margin-top: 3px; font-family: var(--font-en); }
         .bubble-row.mine .bubble-time { text-align: right; }
