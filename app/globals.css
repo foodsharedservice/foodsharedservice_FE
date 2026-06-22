@@ -964,7 +964,6 @@ ul, ol { list-style: none; }
   position: relative;
   display: flex;
   flex-direction: column;
-  flex: 1;
 }
 .app-content {
   flex: 1;
@@ -983,6 +982,7 @@ ul, ol { list-style: none; }
     var(--bg);
 }
 .viewport.mobile .device {
+  flex: 0 0 auto; /* 부모 flex 컨테이너에서 가로로 늘어나지 않도록 (412px 고정 유지) */
   width: 412px;
   max-width: 100%;
   min-height: calc(100vh - 48px);
