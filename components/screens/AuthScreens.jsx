@@ -1,43 +1,19 @@
 "use client";
 
-/* AuthScreens.jsx — D-00 로그인 / D-07 회원가입
-   실제 API 인증 기반. 성공해야 화면이 진행되고, 실패 시 에러를 표시한다. */
+/* AuthScreens.jsx — 로그인 / 회원가입(이메일 → 인증코드 → 기본정보 3단계)
+   API: POST /auth/login, POST /auth/email/send, POST /auth/email/verify,
+        GET /members/nickname/check, POST /members
+   주소 입력은 기존 Daum 우편번호 서비스(AddressSearch) 그대로 사용 */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Icon from "@/components/icons";
-import { Photo, FormError } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/components/Toast";
+import { FormError } from "@/components/ui";
 import AddressSearch from "@/components/AddressSearch";
 import API from "@/lib/api";
 
-/* ============ shared brand panel ============ */
-function AuthBrandPane() {
-  return (
-    <div className="auth-brandpane">
-      <div className="logo">냠냠</div>
-      <div className="auth-tagline">
-        오늘도 한 끼,<br />
-        <em>이웃과 나눕니다</em>
-      </div>
-      <div className="auth-sub">
-        미개봉 가공식품을 우리 동네 이웃과 나누는 따뜻한 거래. 소비기한은 AI가 직접 읽어 확인해요.
-      </div>
-      <div className="auth-pane-cards" aria-hidden="true">
-        <div className="auth-pane-card">
-          <Photo label="" emoji="🥫" />
-          <div className="auth-pane-card-meta"><span>참치캔 6개</span><span>D-12</span></div>
-        </div>
-        <div className="auth-pane-card">
-          <Photo label="" emoji="🍪" />
-          <div className="auth-pane-card-meta"><span>초코파이</span><span>2/4</span></div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ============ D-00 LOGIN ============ */
+/* ============ 로그인 ============ */
 export function LoginScreen() {
   const router = useRouter();
   const { setUser } = useAuth();
@@ -47,11 +23,10 @@ export function LoginScreen() {
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
-    if (busy) return;
+    if (busy || !email || !pw) return;
     setError(null);
     setBusy(true);
     try {
-      // POST /auth/login { email, password } → { memberId, nickName }
       const data = await API.auth.login(email, pw);
       setUser(data || { nickName: email });
       router.push("/");
@@ -63,87 +38,100 @@ export function LoginScreen() {
   };
 
   return (
-    <div className="auth">
-      <AuthBrandPane />
-      <div className="auth-formpane">
-        <div className="auth-card">
-          <div className="eyebrow auth-eyebrow">WELCOME BACK</div>
-          <h1 className="auth-title">로그인</h1>
-          <p className="auth-desc">이메일과 비밀번호로 로그인하세요.</p>
-
-          <div className="auth-field">
-            <div className="label">이메일</div>
-            <input className="field-input" type="email" placeholder="you@example.com"
-              value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="auth-field">
-            <div className="label">비밀번호</div>
-            <input className="field-input" type="password" placeholder="••••••••••"
-              value={pw} onChange={(e) => setPw(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && submit()} />
-          </div>
-
-          <FormError>{error}</FormError>
-
-          <div className="auth-links">
-            <span>이메일 찾기</span>
-            <span>비밀번호 찾기</span>
-          </div>
-
-          <button className="btn primary lg" style={{ width: "100%" }} onClick={submit} disabled={busy || !email || !pw}>
-            {busy ? "로그인 중…" : "로그인"}
-          </button>
-
-          <div className="auth-divider">또는</div>
-
-          <button className="btn ghost lg" style={{ width: "100%" }} onClick={() => router.push("/signup")}>회원 가입</button>
-
-          <div className="auth-guest" onClick={() => router.push("/")}>비회원으로 둘러보기 →</div>
-        </div>
+    <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", padding: "0 24px" }}>
+      <div style={{ height: 90 }} />
+      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--ac)", letterSpacing: ".06em" }}>우리 동네 음식 나눔</div>
+      <div style={{ fontSize: 34, fontWeight: 800, marginTop: 8, lineHeight: 1.15 }}>오늘나눔</div>
+      <div style={{ fontSize: 15, color: "#6B6560", marginTop: 10, lineHeight: 1.5 }}>남는 음식, 이웃과 나눠요.<br />버리기 아까운 마음을 연결합니다.</div>
+      <div style={{ height: 40 }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="이메일" style={authInput} />
+        <input value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} type="password" placeholder="비밀번호" style={authInput} />
+      </div>
+      <FormError>{error}</FormError>
+      <button onClick={submit} disabled={busy || !email || !pw} style={{ width: "100%", marginTop: 20, padding: 16, borderRadius: 13, border: "none", background: "var(--ac)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", opacity: busy || !email || !pw ? 0.6 : 1 }}>{busy ? "로그인 중…" : "로그인"}</button>
+      <div style={{ textAlign: "center", marginTop: 18, fontSize: 14, color: "#9A938C" }}>
+        아직 회원이 아니신가요?{" "}
+        <button onClick={() => router.push("/signup")} style={{ border: "none", background: "transparent", color: "var(--ac)", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>회원가입</button>
       </div>
     </div>
   );
 }
 
-/* ============ D-07 SIGNUP ============ */
+/* ============ 회원가입 (3단계) ============ */
 export function SignupScreen() {
   const router = useRouter();
-  const [nick, setNick] = useState("");
-  const [nickState, setNickState] = useState(null); // null | "ok" | "dup"
+  const toast = useToast();
+  const [step, setStep] = useState(1); // 1 email · 2 code · 3 details
+
+  // step1
   const [email, setEmail] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState("");
-  const [verified, setVerified] = useState(false);
-  const [emailToken, setEmailToken] = useState(null);
+  // step2
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [seconds, setSeconds] = useState(0);
+  const [emailToken, setEmailToken] = useState(null);
+  const codeRefs = useRef([]);
+  // step3
   const [pw, setPw] = useState("");
+  const [nick, setNick] = useState("");
+  const [nickState, setNickState] = useState(null); // ok | dup
   const [road, setRoad] = useState("");
   const [detailAddr, setDetailAddr] = useState("");
   const [addrOpen, setAddrOpen] = useState(false);
   const detailRef = useRef(null);
+
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // Daum 우편번호 검색 완료 → 도로명 주소 자동 입력 후 상세주소로 포커스
-  const handleAddress = useCallback((data) => {
-    const building = data.buildingName && data.buildingName !== "N" ? ` (${data.buildingName})` : "";
-    const road = data.roadAddress || data.autoRoadAddress || data.jibunAddress || "";
-    setRoad(road + building);
-    setTimeout(() => detailRef.current && detailRef.current.focus(), 50);
-  }, []);
-
   useEffect(() => {
-    if (!codeSent || verified || seconds <= 0) return;
+    if (step !== 2 || seconds <= 0) return;
     const t = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(t);
-  }, [codeSent, verified, seconds]);
+  }, [step, seconds]);
 
   const mmss = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+
+  const sendCode = async () => {
+    if (!email.includes("@")) { setError("올바른 이메일을 입력해주세요."); return; }
+    setError(null);
+    setBusy(true);
+    try {
+      const d = await API.auth.sendEmailCode(email);
+      setSeconds((d && d.expiresIn) || 300);
+      setCode(["", "", "", "", "", ""]);
+      setStep(2);
+    } catch (e) {
+      setError(e.code === "EMAIL_DUPLICATED" ? "이미 가입된 이메일이에요." : (e.message || "코드 발송에 실패했어요."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verifyCode = async () => {
+    const c = code.join("");
+    if (c.length !== 6) { setError("6자리 코드를 입력해주세요."); return; }
+    setError(null);
+    setBusy(true);
+    try {
+      const d = await API.auth.verifyEmailCode(email, c);
+      if (d && d.verified) {
+        setEmailToken(d.emailVerifyToken || null);
+        setStep(3);
+      } else {
+        setError("인증 코드가 일치하지 않아요.");
+      }
+    } catch (e) {
+      const map = { CODE_MISMATCH: "인증 코드가 일치하지 않아요.", CODE_EXPIRED: "코드가 만료됐어요. 재발송해주세요." };
+      setError(map[e.code] || e.message || "인증에 실패했어요.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const checkNick = async () => {
     setError(null);
     try {
-      const d = await API.members.checkNickname(nick); // { available }
+      const d = await API.members.checkNickname(nick);
       setNickState(d && d.available ? "ok" : "dup");
     } catch (e) {
       setNickState(null);
@@ -151,51 +139,24 @@ export function SignupScreen() {
     }
   };
 
-  const sendCode = async () => {
-    setError(null);
-    try {
-      const d = await API.auth.sendEmailCode(email); // { expiresIn }
-      setCodeSent(true);
-      setVerified(false);
-      setSeconds((d && d.expiresIn) || 300);
-    } catch (e) {
-      setError(e.code === "EMAIL_DUPLICATED" ? "이미 가입된 이메일이에요." : (e.message || "코드 발송에 실패했어요."));
-    }
-  };
+  const handleAddress = useCallback((data) => {
+    const building = data.buildingName && data.buildingName !== "N" ? ` (${data.buildingName})` : "";
+    const r = data.roadAddress || data.autoRoadAddress || data.jibunAddress || "";
+    setRoad(r + building);
+    setTimeout(() => detailRef.current && detailRef.current.focus(), 50);
+  }, []);
 
-  const verifyCode = async () => {
-    setError(null);
-    try {
-      const d = await API.auth.verifyEmailCode(email, code); // { verified, emailVerifyToken }
-      if (d && d.verified) {
-        setVerified(true);
-        setEmailToken(d.emailVerifyToken || null);
-      } else {
-        setError("인증 코드가 일치하지 않아요.");
-      }
-    } catch (e) {
-      const map = { CODE_MISMATCH: "인증 코드가 일치하지 않아요.", CODE_EXPIRED: "코드가 만료됐어요. 재발송해주세요." };
-      setError(map[e.code] || e.message || "인증에 실패했어요.");
-    }
-  };
-
-  // 비밀번호 규칙: 8-20자 + 영문 대소문자 + 특수문자
   const pwMet = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,20}$/.test(pw);
-  const canSubmit = nickState === "ok" && verified && pwMet && road.length > 0 && !busy;
-  // 무엇이 빠졌는지 구체적으로 안내
-  const missing =
-    nickState !== "ok" ? "닉네임 중복확인을 해주세요" :
-    !verified ? "이메일 인증을 완료해주세요" :
-    !pwMet ? "비밀번호 조건을 확인해주세요 (대·소문자+특수문자 8–20자)" :
-    road.length === 0 ? "주소를 입력해주세요" :
-    null;
+  const canFinish = nickState === "ok" && pwMet && road.length > 0 && !busy;
 
-  const submit = async () => {
-    if (!canSubmit) return;
+  const finish = async () => {
+    if (!canFinish) {
+      setError(nickState !== "ok" ? "닉네임 중복확인을 해주세요" : !pwMet ? "비밀번호 조건을 확인해주세요" : road.length === 0 ? "주소를 입력해주세요" : null);
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
-      // POST /members { email, emailVerifyToken, password, nickName, address } → { memberId }
       await API.members.signup({
         email,
         emailVerifyToken: emailToken,
@@ -203,6 +164,7 @@ export function SignupScreen() {
         nickName: nick,
         address: { roadAddress: road, detailAddress: detailAddr },
       });
+      toast.show("회원가입이 완료되었어요!");
       router.push("/login");
     } catch (e) {
       const map = {
@@ -217,92 +179,118 @@ export function SignupScreen() {
     }
   };
 
+  const onBack = () => {
+    setError(null);
+    if (step === 1) router.push("/login");
+    else setStep((s) => s - 1);
+  };
+
+  const setDigit = (i, v) => {
+    const digit = v.replace(/[^0-9]/g, "").slice(-1);
+    setCode((prev) => { const n = [...prev]; n[i] = digit; return n; });
+    if (digit && i < 5) codeRefs.current[i + 1]?.focus();
+  };
+  const onCodeKey = (i, e) => {
+    if (e.key === "Backspace" && !code[i] && i > 0) codeRefs.current[i - 1]?.focus();
+  };
+
   return (
-    <div className="auth">
-      <AuthBrandPane />
-      <div className="auth-formpane">
-        <div className="auth-card wide">
-          <div className="eyebrow auth-eyebrow">CREATE ACCOUNT</div>
-          <h1 className="auth-title">회원 가입</h1>
-          <p className="auth-desc">필수 정보를 입력해주세요.</p>
+    <div style={{ minHeight: "100dvh" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 8px" }}>
+        <button onClick={onBack} aria-label="뒤로" style={{ width: 40, height: 40, border: "none", background: "transparent", display: "grid", placeItems: "center", cursor: "pointer" }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F1D1B" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+      </div>
 
-          {/* 닉네임 */}
-          <div className="auth-field">
-            <div className="label">닉네임 <span className="hint">2–10자, 중복 불가</span></div>
-            <div className="verify-row">
-              <input className={`field-input ${nickState === "ok" ? "is-ok" : nickState === "dup" ? "is-err" : ""}`}
-                placeholder="나눔러" value={nick}
-                onChange={(e) => { setNick(e.target.value); setNickState(null); }} />
-              <button className="btn ghost" onClick={checkNick} disabled={nick.length < 2}>중복확인</button>
+      <div style={{ padding: "8px 24px" }}>
+        <Progress step={step} />
+
+        {step === 1 && (
+          <>
+            <div style={stepTitle}>이메일을 입력해 주세요</div>
+            <div style={stepDesc}>인증 코드를 보내드릴게요. 유효시간은 5분이에요.</div>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="이메일" style={{ ...authInput, marginTop: 28 }} />
+            <FormError>{error}</FormError>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <div style={stepTitle}>인증 코드를 입력해 주세요</div>
+            <div style={stepDesc}>{email} 으로 보낸 6자리 코드 · 유효시간 <span style={{ color: "var(--ac)", fontWeight: 700 }}>{mmss}</span></div>
+            <div style={{ display: "flex", gap: 8, marginTop: 28, justifyContent: "space-between" }}>
+              {code.map((c, i) => (
+                <input
+                  key={i}
+                  ref={(el) => (codeRefs.current[i] = el)}
+                  value={c}
+                  onChange={(e) => setDigit(i, e.target.value)}
+                  onKeyDown={(e) => onCodeKey(i, e)}
+                  inputMode="numeric"
+                  maxLength={1}
+                  style={{ width: 46, height: 56, textAlign: "center", fontSize: 22, fontWeight: 800, borderRadius: 12, border: `1.5px solid ${c ? "var(--ac)" : "#E5DFD8"}`, background: "#fff" }}
+                />
+              ))}
             </div>
-            {nickState === "ok" && <div className="field-state ok"><Icon.Check /> 사용 가능한 닉네임이에요</div>}
-            {nickState === "dup" && <div className="field-state err"><Icon.X /> 이미 사용 중이에요</div>}
-          </div>
+            {seconds === 0 && <div style={{ marginTop: 12, fontSize: 13, color: "#9A938C" }}>코드가 만료됐어요. <button onClick={sendCode} style={linkBtn}>재발송</button></div>}
+            <FormError>{error}</FormError>
+          </>
+        )}
 
-          {/* 이메일 */}
-          <div className="auth-field">
-            <div className="label">이메일</div>
-            <div className="verify-row">
-              <input className="field-input" type="email" placeholder="you@example.com"
-                value={email} onChange={(e) => setEmail(e.target.value)} />
-              <button className="btn primary" onClick={sendCode} disabled={!email.includes("@")}>
-                {codeSent ? "재발송" : "코드 발송"}
-              </button>
-            </div>
-            {codeSent && <div className="field-state muted">이메일로 6자리 코드를 보냈어요</div>}
-          </div>
-
-          {/* 인증 코드 */}
-          {codeSent && (
-            <div className="auth-field">
-              <div className="label">인증 코드</div>
-              <div className="verify-row">
-                <input className="field-input code-input" placeholder="______" maxLength={6}
-                  value={code} disabled={verified}
-                  onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ""))} />
-                {!verified && <span className="field-suffix">{mmss}</span>}
-                <button className="btn ghost" onClick={verifyCode} disabled={code.length !== 6 || verified}>확인</button>
+        {step === 3 && (
+          <>
+            <div style={stepTitle}>기본 정보를 입력해 주세요</div>
+            <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={fieldLabel}>비밀번호</label>
+                <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" placeholder="••••••••" style={authInput} />
+                <div style={{ fontSize: 12, color: pw && !pwMet ? "var(--danger)" : "#9A938C", marginTop: 6 }}>8~20자, 영문 대소문자와 특수문자를 포함해 주세요.</div>
               </div>
-              {verified && <div className="field-state ok"><Icon.Check /> 이메일 인증 완료</div>}
-              {!verified && seconds === 0 && <div className="field-state err">코드가 만료됐어요. 재발송해주세요</div>}
+              <div>
+                <label style={fieldLabel}>닉네임</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input value={nick} onChange={(e) => { setNick(e.target.value); setNickState(null); }} placeholder="나눔이" style={{ ...authInput, flex: 1 }} />
+                  <button onClick={checkNick} disabled={nick.length < 2} style={{ padding: "0 16px", borderRadius: 12, border: "1.5px solid #E5DFD8", background: "#fff", color: "#6B6560", fontWeight: 700, fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap" }}>중복확인</button>
+                </div>
+                {nickState === "ok" && <div style={{ fontSize: 12.5, color: "#2E9E5B", marginTop: 6, fontWeight: 700 }}>사용 가능한 닉네임이에요</div>}
+                {nickState === "dup" && <div style={{ fontSize: 12.5, color: "var(--danger)", marginTop: 6, fontWeight: 700 }}>이미 사용 중이에요</div>}
+              </div>
+              <div>
+                <label style={fieldLabel}>주소</label>
+                <input value={road} readOnly onClick={() => setAddrOpen(true)} placeholder="도로명 주소 검색" style={{ ...authInput, cursor: "pointer" }} />
+                <input ref={detailRef} value={detailAddr} onChange={(e) => setDetailAddr(e.target.value)} placeholder="상세주소 (선택)" style={{ ...authInput, marginTop: 8 }} />
+              </div>
             </div>
-          )}
+            <FormError>{error}</FormError>
+          </>
+        )}
+      </div>
 
-          {/* 비밀번호 */}
-          <div className="auth-field">
-            <div className="label">비밀번호</div>
-            <input className="field-input" type="password" placeholder="••••••••••"
-              value={pw} onChange={(e) => setPw(e.target.value)} />
-            <div className={`auth-rule ${pwMet ? "met" : ""}`}
-              style={!pwMet && pw.length > 0 ? { color: "var(--danger)" } : undefined}>
-              {pwMet ? <Icon.Check /> : pw.length > 0 ? <Icon.X /> : <span style={{ width: 13, textAlign: "center" }}>·</span>}
-              영문 대·소문자 + 특수문자 포함 8–20자
-            </div>
-          </div>
-
-          {/* 주소 */}
-          <div className="auth-field">
-            <div className="label">주소</div>
-            <div className="verify-row">
-              <input className="field-input" placeholder="도로명 주소 검색" value={road}
-                readOnly onClick={() => setAddrOpen(true)} style={{ cursor: "pointer" }} />
-              <button className="btn ghost" onClick={() => setAddrOpen(true)}>주소 검색</button>
-            </div>
-            <input ref={detailRef} className="field-input" placeholder="상세주소 (선택)" style={{ marginTop: 8 }}
-              value={detailAddr} onChange={(e) => setDetailAddr(e.target.value)} />
-          </div>
-
-          <FormError>{error}</FormError>
-
-          <button className="btn primary lg" style={{ width: "100%", marginTop: 6 }} onClick={submit} disabled={!canSubmit}>
-            {busy ? "가입 중…" : canSubmit ? "가입 완료" : (missing || "필수 항목을 모두 입력해주세요")}
-          </button>
-
-          <div className="auth-guest" onClick={() => router.push("/login")}>이미 계정이 있으신가요? 로그인 →</div>
-        </div>
+      <div style={{ height: 96 }} />
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#FBFAF8", padding: "12px 16px calc(12px + env(safe-area-inset-bottom))", zIndex: 40 }}>
+        {step === 1 && <button onClick={sendCode} disabled={busy} style={ctaBtn}>{busy ? "발송 중…" : "인증 코드 발송"}</button>}
+        {step === 2 && <button onClick={verifyCode} disabled={busy} style={ctaBtn}>{busy ? "확인 중…" : "확인"}</button>}
+        {step === 3 && <button onClick={finish} disabled={busy} style={ctaBtn}>{busy ? "가입 중…" : "가입 완료"}</button>}
       </div>
 
       <AddressSearch open={addrOpen} onClose={() => setAddrOpen(false)} onComplete={handleAddress} />
     </div>
   );
 }
+
+function Progress({ step }) {
+  return (
+    <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
+      {[1, 2, 3].map((s) => (
+        <span key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? "var(--ac)" : "#EBE5DD" }} />
+      ))}
+    </div>
+  );
+}
+
+const authInput = { width: "100%", padding: "15px 16px", borderRadius: 13, border: "1.5px solid #E5DFD8", background: "#fff", fontSize: 15, color: "#1F1D1B" };
+const stepTitle = { fontSize: 24, fontWeight: 800, lineHeight: 1.3 };
+const stepDesc = { fontSize: 14, color: "#6B6560", marginTop: 8 };
+const fieldLabel = { fontSize: 13.5, fontWeight: 700, color: "#37332E", display: "block", marginBottom: 7 };
+const ctaBtn = { width: "100%", padding: 16, borderRadius: 13, border: "none", background: "var(--ac)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" };
+const linkBtn = { border: "none", background: "transparent", color: "var(--ac)", fontWeight: 700, cursor: "pointer", fontSize: 13 };
