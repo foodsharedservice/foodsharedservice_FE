@@ -44,7 +44,7 @@ export default function ChatListScreen() {
   if (authLoading || !user) return null;
 
   return (
-    <div style={{ minHeight: "100dvh" }}>
+    <div className="screen" style={{ minHeight: "100dvh" }}>
       <div style={{ padding: "16px 18px 12px", position: "sticky", top: 0, zIndex: 20, background: "rgba(251,250,248,.92)", backdropFilter: "blur(10px)" }}>
         <div style={{ fontSize: 21, fontWeight: 800 }}>채팅</div>
       </div>

@@ -62,42 +62,39 @@ a { color: inherit; text-decoration: none; }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* ============ 모바일 앱 컬럼 ============ */
-.app-shell {
-  max-width: 480px;
-  margin: 0 auto;
-  min-height: 100dvh;
-  background: var(--bg);
-  position: relative;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.02);
-}
+/* ============ 앱 컨테이너 (모바일 우선) ============ */
+/* 모바일: 화면 패널은 전체 폭 단일 컬럼 */
+.screen { background: var(--bg); }
 
-/* ============ 데스크톱: 휴대폰 목업 프레임 ============ */
-.device-stage {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background:
-    radial-gradient(1200px 620px at 50% -8%, #efeae3 0%, transparent 60%),
-    var(--bg-out);
-}
-.app-shell.device {
-  max-width: none;
-  margin: 0;
-  min-height: 0;
-  flex: none;
-  transform-origin: center center;
-  border-radius: 46px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-shadow:
-    0 0 0 11px #111315,
-    0 0 0 13px #34373b,
-    0 40px 90px rgba(0, 0, 0, 0.38);
+/* 데스크톱 상단 네비게이션 — 기본(모바일)은 숨김 */
+.web-header { display: none; }
+
+/* ============ 데스크톱 (≥760px): 실제 웹 레이아웃 ============ */
+@media (min-width: 760px) {
+  body { background: var(--bg-out); }
+
+  /* 상단 네비게이션 바 */
+  .web-header { display: block; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .web-header-inner { max-width: 1120px; margin: 0 auto; padding: 0 24px; height: 62px; display: flex; align-items: center; gap: 16px; }
+  .web-logo { border: none; background: transparent; font-size: 20px; font-weight: 800; color: var(--ac); cursor: pointer; padding: 0; }
+  .web-nav { display: flex; gap: 4px; }
+  .web-nav button { padding: 8px 14px; border-radius: 10px; border: none; background: transparent; font-size: 15px; font-weight: 700; color: var(--ink-3); cursor: pointer; }
+  .web-nav button:hover { background: var(--chip); color: var(--ink-2); }
+  .web-nav button.active { color: var(--ac); background: var(--ac-50); }
+  .web-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .web-cta { padding: 9px 16px; border-radius: 10px; border: none; background: var(--ac); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer; }
+  .web-cta:hover { background: var(--ac-700); }
+
+  /* 하단 탭바는 데스크톱에서 숨김 (상단 네비로 대체) */
+  .tabbar { display: none !important; }
+
+  /* 화면 패널: 중앙 정렬된 컬럼 */
+  .screen { max-width: 600px; margin: 0 auto; min-height: calc(100dvh - 62px); box-shadow: 0 0 0 1px var(--line); }
+  .screen.wide { max-width: 1120px; }
+  .screen.auth { max-width: 460px; min-height: 100dvh; }
+
+  /* 홈 피드: 데스크톱에서 다단 그리드로 폭을 활용 */
+  .feed-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0 18px; padding: 0 6px; }
 }
 
 /* ============ 공용 유틸 ============ */

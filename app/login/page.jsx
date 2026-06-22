@@ -1,4 +1,3 @@
-import DeviceFrame from "@/components/DeviceFrame";
 import { ToastProvider } from "@/components/Toast";
 import { LoginScreen } from "@/components/screens/AuthScreens";
 
@@ -6,10 +5,10 @@ export const metadata = { title: "로그인 · 오늘나눔" };
 
 export default function LoginPage() {
   return (
-    <DeviceFrame>
-      <ToastProvider>
+    <ToastProvider>
+      <div className="screen auth">
         <LoginScreen />
-      </ToastProvider>
-    </DeviceFrame>
+      </div>
+    </ToastProvider>
   );
 }
