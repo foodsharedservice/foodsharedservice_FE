@@ -27,10 +27,8 @@ export default function DetailScreen({ foodId }) {
   const [requestSent, setRequestSent] = useState(false);
   const [reqError, setReqError] = useState(null);
   const [toast, setToast] = useState(null);
-  const [myReq, setMyReq] = useState(undefined); // undefined=미확인, null=없음, {requestFoodId,status}
+  const [isOwner, setIsOwner] = useState(false);
   const [chatBusy, setChatBusy] = useState(false);
-
-  const isOwner = !!(user && d && user.memberId === d.memberId);
 
   const load = useCallback(() => {
     let alive = true;
@@ -45,17 +43,20 @@ export default function DetailScreen({ foodId }) {
 
   useEffect(() => load(), [load]);
 
-  // 내 신청 상태 조회 (로그인 + 비소유자) — 없으면 404 → null
+  // 등록자 여부 판별: 상세 응답엔 소유자 식별자가 없으므로 내 물품 목록과 대조
   useEffect(() => {
-    if (!user || !d || isOwner) { setMyReq(null); return; }
+    if (!user || !d) { setIsOwner(false); return; }
     let alive = true;
-    API.requests.myForFood(d.foodId)
-      .then((r) => { if (alive) setMyReq(r || null); })
-      .catch((e) => { if (alive) setMyReq(e.status === 404 ? null : null); });
+    API.foods.myFoods()
+      .then((res) => {
+        const list = Array.isArray(res) ? res : (res && res.content) || [];
+        if (alive) setIsOwner(list.some((f) => f.foodId === d.foodId));
+      })
+      .catch(() => { if (alive) setIsOwner(false); });
     return () => { alive = false; };
-  }, [user, d, isOwner]);
+  }, [user, d]);
 
-  const images = (d && d.imageUrls) || [];
+  const images = (d && d.images) || [];
 
   const prev = useCallback(() => {
     if (!images.length) return;
@@ -108,33 +109,26 @@ export default function DetailScreen({ foodId }) {
   const expDate = new Date(d.expired);
   const daysLeft = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
   const cur = images[photoIdx];
+  const curUrl = cur && cur.accessUrl;
+  const isExpImage = cur && cur.imageType === "EXPIRED";
   const full = d.approvedCount >= d.capacity;
 
   const submitRequest = () => {
     setReqError(null);
     API.requests.create(d.foodId)
-      .then((r) => {
+      .then(() => {
         setRequestSent(true);
-        setMyReq({ requestFoodId: r && r.requestFoodId, status: "REQUEST" });
         setTimeout(() => { setRequestModal(false); load(); }, 1300);
       })
       .catch((e) => {
         const map = {
-          FOOD_REQUEST_ALREADY_EXISTS: "이미 요청한 물품이에요.",
-          SELF_CHAT_NOT_ALLOWED: "본인이 등록한 물품에는 요청할 수 없어요.",
+          REQUEST_DUPLICATED: "이미 요청한 물품이에요.",
+          SELF_REQUEST_NOT_ALLOWED: "본인이 등록한 물품에는 요청할 수 없어요.",
           FOOD_NOT_AVAILABLE: "지금은 요청할 수 없는 상태예요 (완료/만료 등).",
           FOOD_NOT_FOUND: "삭제된 물품이에요.",
         };
         setReqError(map[e.code] || e.message || "요청에 실패했어요.");
       });
-  };
-
-  const cancelRequest = () => {
-    if (!myReq || !myReq.requestFoodId) return;
-    if (!window.confirm("나눔 요청을 취소할까요?")) return;
-    API.requests.cancel(d.foodId, myReq.requestFoodId)
-      .then(() => { setMyReq(null); showToast("요청을 취소했어요"); load(); })
-      .catch((e) => showToast(e.message || "취소에 실패했어요"));
   };
 
   const openChat = () => {
@@ -152,9 +146,6 @@ export default function DetailScreen({ foodId }) {
       .finally(() => setChatBusy(false));
   };
 
-  // 비소유자 CTA 라벨/상태
-  const reqStatusLabel = myReq && { REQUEST: "요청 대기중", APPROVED: "요청 수락됨 🎉", REJECTED: "요청 거절됨" }[myReq.status];
-
   return (
     <div className="detail">
       <div className="detail-crumb">
@@ -167,8 +158,11 @@ export default function DetailScreen({ foodId }) {
         {/* ============ Left: image carousel ============ */}
         <div className="detail-left">
           <div className="carousel">
-            <Photo label="냠냠" src={cur} />
+            <Photo label="냠냠" src={curUrl} />
             <div className="carousel-tl"><StatusBadge status={d.statusTx} solid /></div>
+            {isExpImage && (
+              <div className="carousel-tr exp-tag"><Icon.Calendar /> 소비기한 인증 사진</div>
+            )}
             {images.length > 0 && (
               <div className="carousel-counter">
                 <span className="font-en">{photoIdx + 1}</span><span>/</span><span className="font-en">{images.length}</span>
@@ -185,8 +179,9 @@ export default function DetailScreen({ foodId }) {
           {images.length > 1 && (
             <div className="carousel-thumbs">
               {images.map((img, i) => (
-                <button key={i} className={`thumb ${i === photoIdx ? "on" : ""}`} onClick={() => setPhotoIdx(i)}>
-                  <Photo label="" src={img} ratio="1/1" />
+                <button key={img.imageId ?? i} className={`thumb ${i === photoIdx ? "on" : ""}`} onClick={() => setPhotoIdx(i)}>
+                  <Photo label="" src={img.accessUrl} ratio="1/1" />
+                  {img.imageType === "EXPIRED" && <div className="thumb-star">⭐</div>}
                 </button>
               ))}
             </div>
@@ -196,12 +191,11 @@ export default function DetailScreen({ foodId }) {
         {/* ============ Right: info ============ */}
         <div className="detail-right">
           <div className="detail-owner">
-            <Avatar name={isOwner ? (user.nickName || "나") : `${d.memberId}`} size={42} />
+            <Avatar name={d.ownerNickName || (isOwner ? (user && user.nickName) || "나" : "?")} size={42} />
             <div style={{ flex: 1 }}>
-              <div className="owner-name">{isOwner ? "내가 등록한 물품" : `이웃 #${d.memberId}`}</div>
-              <div className="owner-sub">{d.region ? d.region : "동네 나눔"}</div>
+              <div className="owner-name">{isOwner ? "내가 등록한 물품" : (d.ownerNickName || "이웃")}</div>
+              <div className="owner-sub">등록자</div>
             </div>
-            {d.region && <span className="region-pill"><Icon.Pin /> {d.region}</span>}
           </div>
 
           <h1 className="detail-title" style={{ marginTop: 18 }}>{d.foodName}</h1>
@@ -233,26 +227,17 @@ export default function DetailScreen({ foodId }) {
                 <button className="btn ghost lg" onClick={openChat} disabled={chatBusy}>
                   <Icon.Chat /> {chatBusy ? "여는 중…" : "채팅하기"}
                 </button>
-                {myReq ? (
-                  <button className="btn primary lg cta" disabled style={{ opacity: 0.9 }}>
-                    {reqStatusLabel}
-                  </button>
-                ) : (
-                  <button
-                    className="btn primary lg cta"
-                    onClick={() => {
-                      if (!user) { router.push("/login"); return; }
-                      setReqError(null); setRequestSent(false); setRequestModal(true);
-                    }}
-                    disabled={d.statusTx !== "IN_PROGRESS" || full}
-                  >
-                    {d.statusTx !== "IN_PROGRESS" ? "요청할 수 없는 상태예요" : full ? "정원이 다 찼어요" : !user ? "로그인하고 요청하기" : "나눔 요청 보내기"}
-                  </button>
-                )}
+                <button
+                  className="btn primary lg cta"
+                  onClick={() => {
+                    if (!user) { router.push("/login"); return; }
+                    setReqError(null); setRequestSent(false); setRequestModal(true);
+                  }}
+                  disabled={!!user && (d.statusTx !== "IN_PROGRESS" || full)}
+                >
+                  {!user ? "로그인하고 요청하기" : d.statusTx !== "IN_PROGRESS" ? "요청할 수 없는 상태예요" : full ? "정원이 다 찼어요" : "나눔 요청 보내기"}
+                </button>
               </div>
-              {myReq && myReq.status === "REQUEST" && (
-                <button className="link-cancel" onClick={cancelRequest}>요청 취소하기</button>
-              )}
               <div className="cta-hint">본인이 등록한 물품과 중복 요청은 보낼 수 없어요.</div>
             </>
           )}
@@ -281,6 +266,8 @@ export default function DetailScreen({ foodId }) {
         .carousel { position: relative; background: var(--surface-2); border-radius: var(--r-img); overflow: hidden; }
         .carousel .ph { aspect-ratio: 4/3; border-radius: var(--r-img); }
         .carousel-tl { position: absolute; top: 14px; left: 14px; }
+        .carousel-tr.exp-tag { position: absolute; top: 14px; right: 14px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--accent); color: var(--ink); border-radius: 999px; font-size: 11px; font-weight: 700; }
+        .thumb-star { position: absolute; top: 4px; right: 4px; font-size: 11px; background: var(--accent); width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; }
         .carousel-counter { position: absolute; bottom: 14px; right: 14px; background: rgba(31,29,24,0.72); color: var(--bg); padding: 4px 10px; border-radius: 999px; font-size: 11.5px; display: inline-flex; gap: 3px; backdrop-filter: blur(6px); }
         .carousel-counter .font-en { font-family: var(--font-en); font-weight: 600; }
         .carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.9); color: var(--ink); display: grid; place-items: center; box-shadow: 0 2px 8px rgba(31,29,24,0.12); transition: all 0.12s; }
@@ -340,7 +327,7 @@ function OwnerRequests({ foodId, onChange }) {
 
   const act = (requestId, kind) => {
     const fn = kind === "approve" ? API.requests.approve : API.requests.reject;
-    fn(foodId, requestId)
+    fn(requestId)
       .then(() => { load(); onChange && onChange(); })
       .catch((e) => alert(e.message || "처리에 실패했어요."));
   };
@@ -364,9 +351,9 @@ function OwnerRequests({ foodId, onChange }) {
         <>
           {pending.map((r) => (
             <div className="req-card" key={r.requestFoodId}>
-              <Avatar name={`${r.memberId}`} size={34} />
+              <Avatar name={r.requesterNickName || "?"} size={34} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="req-name">이웃 #{r.memberId}</div>
+                <div className="req-name">{r.requesterNickName || "이웃"}</div>
                 <div className="req-sub">나눔을 요청했어요</div>
               </div>
               <div style={{ display: "flex", gap: 6 }}>
@@ -377,9 +364,9 @@ function OwnerRequests({ foodId, onChange }) {
           ))}
           {decided.map((r) => (
             <div className="req-card muted" key={r.requestFoodId}>
-              <Avatar name={`${r.memberId}`} size={34} />
+              <Avatar name={r.requesterNickName || "?"} size={34} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="req-name">이웃 #{r.memberId}</div>
+                <div className="req-name">{r.requesterNickName || "이웃"}</div>
                 <div className="req-sub">{r.status === "APPROVED" ? "수락됨" : "거절됨"}</div>
               </div>
               <span className={`badge ${r.status === "APPROVED" ? "progress" : "incomplete"}`}>
@@ -421,7 +408,7 @@ function RequestModal({ food, sent, error, onClose, onSubmit }) {
             </p>
 
             <div className="modal-summary">
-              <Photo label="냠냠" src={(food.imageUrls && food.imageUrls[0]) || undefined} ratio="1/1" />
+              <Photo label="냠냠" src={(food.images && food.images[0] && food.images[0].accessUrl) || undefined} ratio="1/1" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700 }}>{food.foodName}</div>
                 <div style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 4 }}>
