@@ -10,7 +10,7 @@
    (발신자는 자신의 메시지를 소켓으로 다시 받지 않으므로 낙관적으로 화면에 추가) */
 
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Icon from "@/components/icons";
 import { Avatar, StateBox, Spinner } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
@@ -32,9 +32,16 @@ function timeLabel(iso) {
 /* ============ 채팅 목록 ============ */
 export function ChatListScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
   const [rooms, setRooms] = useState(null); // null=loading
   const [error, setError] = useState(null);
+
+  // 현재 열려 있는 채팅방(URL) — 목록에서 활성 항목을 강조
+  const activeRoomId = (() => {
+    const m = pathname && pathname.match(/^\/chat\/(\d+)/);
+    return m ? Number(m[1]) : null;
+  })();
 
   useEffect(() => {
     if (authLoading) return;
@@ -64,7 +71,7 @@ export function ChatListScreen() {
       ) : (
         <div className="room-list">
           {rooms.map((r) => (
-            <button className="room-item" key={r.roomId} onClick={() => router.push(`/chat/${r.roomId}`)}>
+            <button className={`room-item ${r.roomId === activeRoomId ? "active" : ""}`} key={r.roomId} onClick={() => router.push(`/chat/${r.roomId}`)}>
               <Avatar name={r.partnerNickName || "?"} size={48} />
               <div className="room-item-body">
                 <div className="room-item-top">
@@ -81,13 +88,14 @@ export function ChatListScreen() {
       )}
 
       <style>{`
-        .chat-list { max-width: 760px; margin: 0 auto; padding: 24px 20px 60px; }
-        .chat-list-head { margin-bottom: 16px; }
+        .chat-list { width: 100%; padding: 20px 16px 40px; }
+        .chat-list-head { margin-bottom: 16px; padding: 0 2px; }
         .chat-list-head h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
         .room-list { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
-        .room-item { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 16px 18px; border-bottom: 1px solid var(--line); background: var(--surface); transition: background 0.12s; }
+        .room-item { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 16px 18px; border-bottom: 1px solid var(--line); background: var(--surface); transition: background 0.12s; border-left: 3px solid transparent; }
         .room-item:last-child { border-bottom: 0; }
         .room-item:hover { background: var(--bg-2); }
+        .room-item.active { background: var(--bg-2); border-left-color: var(--primary); }
         .room-item-body { flex: 1; min-width: 0; }
         .room-item-top { display: flex; align-items: baseline; gap: 8px; }
         .room-partner { font-weight: 700; font-size: 14.5px; }
@@ -124,6 +132,22 @@ function readHistory(hist) {
     downCursor: null,
     hasNext: false,
   };
+}
+
+/* ============ 빈 화면(데스크톱: 방 미선택 시 우측 패널) ============ */
+export function ChatEmptyPane() {
+  return (
+    <div className="chat-empty-pane">
+      <div className="chat-empty-icon"><Icon.Chat /></div>
+      <p>대화방을 선택해주세요</p>
+      <style>{`
+        .chat-empty-pane { height: 100%; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--ink-4); }
+        .chat-empty-icon { width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; background: var(--bg-2); color: var(--ink-4); }
+        .chat-empty-icon svg { width: 30px; height: 30px; }
+        .chat-empty-pane p { font-size: 15px; font-weight: 600; }
+      `}</style>
+    </div>
+  );
 }
 
 /* ============ 실시간 채팅방 ============ */
@@ -338,10 +362,11 @@ export function ChatRoomScreen({ roomId }) {
       </div>
 
       <style>{`
-        .chat-room { display: flex; flex-direction: column; height: calc(100vh - 60px); max-width: 760px; margin: 0 auto; }
+        .chat-room { display: flex; flex-direction: column; height: 100%; width: 100%; }
         .chat-room-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
-        .chat-room-head .crumb-back { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--ink-2); }
+        .chat-room-head .crumb-back { width: 32px; height: 32px; display: none; place-items: center; border-radius: 8px; color: var(--ink-2); }
         .chat-room-head .crumb-back:hover { background: var(--bg-2); }
+        @media (max-width: 900px) { .chat-room-head .crumb-back { display: grid; } }
         .cr-partner { font-weight: 700; font-size: 15px; }
         .cr-food { font-size: 11.5px; color: var(--primary); font-weight: 600; margin-top: 1px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .cr-status { font-size: 11px; font-weight: 600; color: var(--ink-4); white-space: nowrap; }
@@ -366,9 +391,6 @@ export function ChatRoomScreen({ roomId }) {
         .chat-input input { flex: 1; height: 44px; border: 1px solid var(--line-2); border-radius: 22px; padding: 0 18px; font-size: 14px; background: var(--bg); color: var(--ink); }
         .chat-input input:focus { border-color: var(--primary); outline: none; }
         .chat-input .btn { width: 44px; height: 44px; border-radius: 50%; padding: 0; display: grid; place-items: center; }
-        @media (max-width: 900px) {
-          .chat-room { height: calc(100vh - 56px); }
-        }
       `}</style>
     </div>
   );
