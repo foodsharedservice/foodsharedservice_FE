@@ -4,10 +4,10 @@
    API: GET /foods?status={status}&page={page}&size={size}
    실제 API 데이터만 사용 (mock 폴백 없음). 실패 시 에러 UI 표시. */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
-import { StatusBadge, Photo, StateBox } from "@/components/ui";
+import { StatusBadge, Photo, StateBox, Spinner } from "@/components/ui";
 import API from "@/lib/api";
 
 const FILTERS = [
@@ -29,6 +29,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const sentinelRef = useRef(null);
 
   // 정렬은 서버 sort 파라미터로 처리 (허용 필드: foodId, expired, capacity)
   const sortParam = sort === "expiring" ? "expired,asc" : "foodId,desc";
@@ -75,6 +76,18 @@ export default function HomeScreen() {
       .catch(() => {})
       .finally(() => setLoadingMore(false));
   };
+
+  // 하단 sentinel이 보이면 자동으로 다음 페이지 로드 (무한 스크롤)
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasNext) return;
+    const io = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
+      { rootMargin: "300px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNext, loadingMore, page, sortParam]);
 
   const inProgressCount = rows.filter((i) => i.statusTx === "IN_PROGRESS").length;
   const items = rows.filter((it) => filter === "ALL" || it.statusTx === filter);
@@ -157,10 +170,8 @@ export default function HomeScreen() {
             ))}
           </div>
           {hasNext && (
-            <div className="feed-foot">
-              <button className="btn ghost" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? "불러오는 중…" : "더 보기"}
-              </button>
+            <div className="feed-foot" ref={sentinelRef}>
+              {loadingMore && <Spinner size={24} />}
             </div>
           )}
         </>
