@@ -1,51 +1,52 @@
 /* ============================================================
    냠냠 — 음식 나눔 서비스 디자인 시스템
-   톤: 동네 카페 · 따뜻하고 정돈된 · 약간 레트로
+   컨셉: "동네 냉장고/마켓" · 신선한 초록 + 따뜻한 크림 + 탱고린 포인트
+   통통한 라운드 · 스티커형 배지 · 넉넉한 여백
    ============================================================ */
 
 :root {
-  /* Brand */
-  --primary:        #4A5D3A;          /* 진한 올리브 */
-  --primary-700:    #3B4B2E;
-  --primary-100:    #ECEFE3;
-  --primary-50:     #F4F6EE;
+  /* Brand — 신선한 켈리 그린 */
+  --primary:        #15A368;
+  --primary-700:    #0C7A4C;
+  --primary-100:    #D2F0E0;
+  --primary-50:     #EAFAF2;
 
-  --accent:         #D4A848;          /* 머스타드 */
-  --accent-700:     #B58F33;
-  --accent-100:     #F6ECD0;
-  --accent-50:      #FBF6E6;
+  --accent:         #FF7A45;          /* 탱고린 */
+  --accent-700:     #E2561F;
+  --accent-100:     #FFE0D0;
+  --accent-50:      #FFF1E9;
 
-  --danger:         #B14A3C;          /* 따뜻한 톤의 빨강 */
-  --danger-100:    #F5DDD6;
+  --danger:         #E1543B;
+  --danger-100:    #FBDDD5;
 
-  --info:           #5B7592;          /* 차분한 회청색 (완료 뱃지) */
-  --info-100:       #DBE3EC;
+  --info:           #3E7CB1;          /* 차분한 블루 (완료 뱃지) */
+  --info-100:       #DBE8F4;
 
-  /* Surface — 오프화이트 계열 */
-  --bg:             #FAF8F3;
-  --bg-2:           #F3EFE5;
+  /* Surface — 따뜻한 크림 계열 */
+  --bg:             #FFF9F0;
+  --bg-2:           #F6EEDF;
   --surface:        #FFFFFF;
-  --surface-2:      #FCFAF4;
+  --surface-2:      #FFFCF6;
 
   /* Ink */
-  --ink:            #1F1D18;
-  --ink-2:          #3A372F;
-  --ink-3:          #6B6759;
-  --ink-4:          #95907F;
-  --ink-5:          #C1BCA9;
+  --ink:            #211E17;
+  --ink-2:          #3C372D;
+  --ink-3:          #6E675A;
+  --ink-4:          #9B9484;
+  --ink-5:          #C9C2B1;
 
-  --line:           #E5E0D2;
-  --line-2:         #D6D0BD;
+  --line:           #EDE5D5;
+  --line-2:         #DCD3BF;
 
-  /* Effects */
-  --shadow-card:    0 1px 2px rgba(31,29,24,0.04), 0 1px 0 rgba(31,29,24,0.03);
-  --shadow-pop:     0 12px 28px rgba(31,29,24,0.12), 0 2px 6px rgba(31,29,24,0.08);
-  --shadow-card-hover: 0 4px 10px rgba(31,29,24,0.08), 0 1px 2px rgba(31,29,24,0.05);
+  /* Effects — 부드럽고 따뜻한 그림자 */
+  --shadow-card:    0 2px 4px rgba(33,30,23,0.05), 0 1px 0 rgba(33,30,23,0.03);
+  --shadow-pop:     0 18px 40px rgba(33,30,23,0.14), 0 4px 10px rgba(33,30,23,0.07);
+  --shadow-card-hover: 0 8px 18px rgba(33,30,23,0.10), 0 2px 4px rgba(33,30,23,0.05);
 
-  /* Radius */
-  --r-card:   8px;
-  --r-btn:    10px;
-  --r-img:    12px;
+  /* Radius — 통통하게 */
+  --r-card:   18px;
+  --r-btn:    13px;
+  --r-img:    16px;
   --r-pill:   999px;
 
   /* Type */
@@ -1010,3 +1011,117 @@ ul, ol { list-style: none; }
   .auth-shell .auth .auth-brandpane { padding: 24px 20px; }
   .auth-shell .auth .auth-pane-cards { display: none; }
 }
+
+/* =========================================================
+   리디자인 레이어 — "동네 냉장고/마켓"
+   토큰(색/라운드) 위에 독특한 디테일을 입힌다.
+   공용 클래스(.btn/.badge/.ph/.app-header 등)는 globals에 정의되어
+   컴포넌트 인라인 스타일과 충돌하지 않으므로 여기서 보강한다.
+   ========================================================= */
+
+/* 본문 배경에 은은한 도트/그라데이션 */
+body {
+  background:
+    radial-gradient(900px 500px at 100% -5%, var(--primary-50) 0%, transparent 55%),
+    radial-gradient(700px 480px at -5% 0%, var(--accent-50) 0%, transparent 50%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* ---- 버튼: 통통 + 호버 리프트 ---- */
+.btn { font-weight: 700; letter-spacing: -0.01em; }
+.btn.primary { box-shadow: 0 6px 14px rgba(21,163,104,0.22); }
+.btn.primary:hover { transform: translateY(-1px); box-shadow: 0 9px 20px rgba(21,163,104,0.28); }
+.btn.lg { border-radius: 14px; }
+.btn.accent { color: #fff; }
+.btn.accent:hover { transform: translateY(-1px); }
+
+/* ---- 상태 배지: 스티커 느낌 ---- */
+.badge {
+  padding: 4px 11px;
+  border: 1.5px solid currentColor;
+  box-shadow: 0 1px 0 rgba(33,30,23,0.04);
+}
+.badge.progress  { color: var(--primary-700); background: var(--primary-50); }
+.badge.done      { color: var(--info);        background: var(--info-100); }
+.badge.expired   { color: var(--danger);       background: var(--danger-100); }
+.badge.incomplete{ color: var(--ink-3);        background: var(--bg-2); }
+.badge.solid.progress,
+.badge.solid.done,
+.badge.solid.expired,
+.badge.solid.incomplete { border-color: transparent; box-shadow: 0 2px 6px rgba(33,30,23,0.12); }
+
+/* ---- 플레이스홀더: 친근한 소프트 톤 ---- */
+.ph {
+  background: linear-gradient(135deg, var(--primary-50), var(--accent-50));
+}
+.ph .ph-label {
+  background: rgba(255,255,255,0.9);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: var(--font-kr);
+  font-weight: 800;
+  color: var(--primary-700);
+  letter-spacing: -0.01em;
+}
+
+/* ---- 헤더: 블러 스티키 + 둥근 검색 ---- */
+.app-header {
+  background: rgba(255,253,248,0.82);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.app-header .logo { gap: 7px; font-weight: 900; }
+.app-header .logo::before {
+  width: 22px; height: 22px; border-radius: 8px;
+  background: var(--primary);
+  box-shadow: inset 0 0 0 3px var(--accent);
+  transform: rotate(-8deg);
+}
+.app-header .search input { border-radius: 999px; height: 42px; background: var(--surface); border: 1.5px solid var(--line); }
+.app-header .search input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-50); }
+.icobtn { border-radius: 12px; }
+
+/* ---- 카드/칩/탭/필드 ---- */
+.card { border-radius: var(--r-card); }
+.chip { border-radius: 999px; border-width: 1.5px; }
+.chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.field-input { border-radius: var(--r-btn); border-width: 1.5px; }
+.field-input:focus { box-shadow: 0 0 0 4px var(--primary-50); }
+.avatar { background: var(--primary-100); color: var(--primary-700); box-shadow: inset 0 0 0 1.5px var(--surface); }
+
+/* ---- 콘텐츠 폭/여백 (양옆 여백, 당근/번개장터 느낌) ---- */
+.app-content { padding: 0; }
+
+/* ---- 홈 피드 카드: 통통 + 호버 리프트 ---- */
+.app-content .food-card { border-radius: var(--r-card); }
+.app-content .food-card .ph { border-radius: 14px; }
+.app-content .food-card.interactive:hover { transform: translateY(-3px); box-shadow: var(--shadow-pop); }
+.app-content .food-card-title { font-size: 15px; }
+.app-content .d-tag { border-radius: 999px; font-weight: 700; }
+
+/* ---- 홈 히어로: 둥근 패널 ---- */
+.app-content .home-hero {
+  margin: 20px 24px 0;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.app-content .home-hero-title em::after { background: var(--accent); opacity: 0.5; height: 12px; border-radius: 6px; }
+
+/* ---- 거래/마이 등 카드 라운드 보강 ---- */
+.app-content .tx-card,
+.app-content .register-card,
+.app-content .my-profile,
+.app-content .my-menu,
+.app-content .my-row,
+.app-content .detail-info { border-radius: var(--r-card); }
+
+/* ---- 인증 브랜드 패널: 신선 그라데이션 ---- */
+.auth-brandpane {
+  background:
+    radial-gradient(520px 320px at 80% 10%, rgba(255,122,69,0.30) 0%, transparent 55%),
+    linear-gradient(160deg, var(--primary) 0%, var(--primary-700) 100%);
+}
+.auth-brandpane .logo::before { background: var(--accent); }
