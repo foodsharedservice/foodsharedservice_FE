@@ -15,22 +15,22 @@ import API from "@/lib/api";
 function AuthBrandPane() {
   return (
     <div className="auth-brandpane">
-      <div className="logo">냠냠</div>
+      <div className="logo"><span className="bolt">⚡</span> 나눔장터</div>
       <div className="auth-tagline">
-        오늘도 한 끼,<br />
-        <em>이웃과 나눕니다</em>
+        안 쓰는 물건도,<br />
+        <em>이웃에겐 보물이 돼요</em>
       </div>
       <div className="auth-sub">
-        미개봉 가공식품을 우리 동네 이웃과 나누는 따뜻한 거래. 소비기한은 AI가 직접 읽어 확인해요.
+        우리 동네 이웃과 물건과 식품을 무료로 나누는 나눔 마켓. 소비기한은 AI가 사진으로 읽어 확인해요.
       </div>
       <div className="auth-pane-cards" aria-hidden="true">
         <div className="auth-pane-card">
-          <Photo label="" emoji="🥫" />
-          <div className="auth-pane-card-meta"><span>참치캔 6개</span><span>D-12</span></div>
+          <Photo label="" emoji="📦" />
+          <div className="auth-pane-card-meta"><span>무료나눔</span><span>3/5명</span></div>
         </div>
         <div className="auth-pane-card">
-          <Photo label="" emoji="🍪" />
-          <div className="auth-pane-card-meta"><span>초코파이</span><span>2/4</span></div>
+          <Photo label="" emoji="🥫" />
+          <div className="auth-pane-card-meta"><span>무료나눔</span><span>D-12</span></div>
         </div>
       </div>
     </div>
@@ -40,7 +40,7 @@ function AuthBrandPane() {
 /* ============ D-00 LOGIN ============ */
 export function LoginScreen() {
   const router = useRouter();
-  const { setUser } = useAuth();
+  const { refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [error, setError] = useState(null);
@@ -52,8 +52,9 @@ export function LoginScreen() {
     setBusy(true);
     try {
       // POST /auth/login { email, password } → { memberId, nickName }
-      const data = await API.auth.login(email, pw);
-      setUser(data || { nickName: email });
+      await API.auth.login(email, pw);
+      // 세션 쿠키 기반 → 전체 프로필(memberId/address 포함)을 다시 불러온다
+      await refresh();
       router.push("/");
     } catch (e) {
       setError(e.code === "LOGIN_FAILED" ? "이메일 또는 비밀번호가 일치하지 않아요." : (e.message || "로그인에 실패했어요."));

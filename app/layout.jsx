@@ -2,14 +2,14 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata = {
-  title: "냠냠 · 음식 나눔 서비스",
-  description: "미개봉 가공식품을 우리 동네 이웃과 나누는 따뜻한 거래. 소비기한은 AI가 직접 읽어 확인해요.",
+  title: "나눔장터 · 우리 동네 물품 나눔",
+  description: "안 쓰는 물건, 남는 식품을 우리 동네 이웃과 나눠요. 소비기한은 AI가 사진으로 읽어 확인합니다.",
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#4A5D3A",
+  themeColor: "#FF3621",
 };
 
 export default function RootLayout({ children }) {
