@@ -19,10 +19,35 @@ export default function AppHeader() {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const [bellOpen, setBellOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
 
   const isRegister = pathname?.startsWith("/register");
   const isMypage = pathname?.startsWith("/mypage");
   const isChat = pathname?.startsWith("/chat");
+
+  // 받은 나눔 요청(REQUEST) 개수를 집계해 벨 아이콘 뱃지로 표시한다.
+  // (백엔드에 통합 알림 API가 없어, 내 물품 foodId별 GET /foods/{id}/requests를 합산)
+  useEffect(() => {
+    if (!user) { setNotifCount(0); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const ids = getMyFoodIds(user.memberId);
+        if (!ids.length) { if (alive) setNotifCount(0); return; }
+        const counts = await Promise.all(
+          ids.map((foodId) =>
+            API.requests.received(foodId)
+              .then((rs) => (rs || []).filter((r) => r.status === "REQUEST").length)
+              .catch(() => 0)
+          )
+        );
+        if (alive) setNotifCount(counts.reduce((a, b) => a + b, 0));
+      } catch {
+        if (alive) setNotifCount(0);
+      }
+    })();
+    return () => { alive = false; };
+  }, [user, pathname, bellOpen]);
 
   return (
     <div className="app-header">
@@ -48,6 +73,7 @@ export default function AppHeader() {
               aria-label="알림"
             >
               <Icon.Bell />
+              {notifCount > 0 && !bellOpen && <span className="dot">{notifCount}</span>}
             </button>
             <button className={`icobtn ${isMypage ? "on" : ""}`} onClick={() => router.push("/mypage")} aria-label="마이페이지">
               <Avatar name={user.nickName || "?"} size={28} />
