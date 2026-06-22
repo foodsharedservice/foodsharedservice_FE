@@ -1,8 +1,8 @@
 "use client";
 
 /* RegisterScreen.jsx — 나눔 등록
-   API 1: POST /foods/expired-date (multipart: expiredImage) → { expiredImageId, expired, accessUrl }
-   API 2: POST /foods (multipart: request JSON + images[]) */
+   API 1: POST /foods/expired-date (multipart: expiredImage) → { expired }  (날짜만, 미저장 미리보기)
+   API 2: POST /foods (multipart: request JSON(expired 포함) + expiredImage(EXPIRED) + images[](BASIC)) */
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -21,7 +21,6 @@ export default function RegisterScreen() {
   const [expFile, setExpFile] = useState(null);
   const [expPreview, setExpPreview] = useState(null);
   const [expDate, setExpDate] = useState(null);
-  const [expiredImageId, setExpiredImageId] = useState(null);
 
   const [foodName, setFoodName] = useState("");
   const [capacity, setCapacity] = useState(3);
@@ -41,7 +40,6 @@ export default function RegisterScreen() {
     setExpPreview(URL.createObjectURL(file));
     setAiState("empty");
     setExpDate(null);
-    setExpiredImageId(null);
   };
 
   const recognize = () => {
@@ -49,10 +47,8 @@ export default function RegisterScreen() {
     setAiState("loading");
     API.foods.recognizeExpiry(expFile)
       .then((data) => {
-        if (data && data.expired && data.expiredImageId != null) {
+        if (data && data.expired) {
           setExpDate(data.expired);
-          setExpiredImageId(data.expiredImageId);
-          if (data.accessUrl) setExpPreview(data.accessUrl);
           setAiState("done");
         } else {
           setAiState("empty");
@@ -83,7 +79,7 @@ export default function RegisterScreen() {
   };
   const removePhoto = (id) => setPhotos((prev) => prev.filter((p) => p.id !== id));
 
-  const canSubmit = aiState === "done" && expiredImageId != null && foodName.trim().length > 0 && !busy;
+  const canSubmit = aiState === "done" && expDate != null && expFile != null && foodName.trim().length > 0 && !busy;
 
   const submitFood = async () => {
     if (aiState !== "done") { toast.show("소비기한 인식을 먼저 해주세요"); return; }
@@ -91,7 +87,7 @@ export default function RegisterScreen() {
     if (!canSubmit) return;
     setBusy(true);
     try {
-      await API.foods.create({ foodName: foodName.trim(), expiredImageId, capacity, details, images: photos.map((p) => p.file) });
+      await API.foods.create({ foodName: foodName.trim(), capacity, details, expired: expDate, expiredImage: expFile, images: photos.map((p) => p.file) });
       toast.show("물품이 등록되었어요!");
       router.push("/");
     } catch (err) {
@@ -143,7 +139,7 @@ export default function RegisterScreen() {
               <div style={{ fontSize: 19, fontWeight: 800, marginTop: 3 }}>{(expDate || "").replace(/-/g, ".")}</div>
               <div style={{ fontSize: 11.5, color: "#7C8567", marginTop: 3 }}>AI 인식값으로 자동 설정 · 수정 불가</div>
             </div>
-            <button onClick={() => { setAiState("empty"); setExpDate(null); setExpiredImageId(null); setExpFile(null); setExpPreview(null); }} aria-label="다시 올리기" style={{ border: "none", background: "transparent", cursor: "pointer", padding: 4 }}>
+            <button onClick={() => { setAiState("empty"); setExpDate(null); setExpFile(null); setExpPreview(null); }} aria-label="다시 올리기" style={{ border: "none", background: "transparent", cursor: "pointer", padding: 4 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C8567" strokeWidth="2.2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
             </button>
           </div>
