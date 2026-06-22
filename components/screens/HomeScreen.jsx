@@ -1,28 +1,14 @@
 "use client";
 
 /* HomeScreen.jsx — D-01 홈 피드
-   API: GET /foods?status={status}&page={page}&size={size} */
+   API: GET /foods?status={status}&page={page}&size={size}
+   실제 API 데이터만 사용 (mock 폴백 없음). 실패 시 에러 UI 표시. */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
-import { StatusBadge, Photo } from "@/components/ui";
+import { StatusBadge, Photo, StateBox } from "@/components/ui";
 import API from "@/lib/api";
-
-const HOME_ITEMS = [
-  { foodId: 1, foodName: "참치캔 6개입 (미개봉)", expired: "2026-06-25", approvedCount: 1, capacity: 3, statusTx: "IN_PROGRESS", emoji: "🐟" },
-  { foodId: 2, foodName: "스팸 클래식 200g x 4", expired: "2026-07-15", approvedCount: 0, capacity: 2, statusTx: "IN_PROGRESS", emoji: "🥫" },
-  { foodId: 3, foodName: "오뚜기 카레 (백미)", expired: "2026-08-02", approvedCount: 1, capacity: 1, statusTx: "COMPLETED", emoji: "🍛" },
-  { foodId: 4, foodName: "농심 신라면 5개입", expired: "2026-06-02", approvedCount: 0, capacity: 5, statusTx: "EXPIRED", emoji: "🍜" },
-  { foodId: 5, foodName: "맥심 모카골드 100T", expired: "2026-08-30", approvedCount: 0, capacity: 5, statusTx: "IN_PROGRESS", emoji: "☕" },
-  { foodId: 6, foodName: "코코아 분말 (미개봉)", expired: "2026-09-15", approvedCount: 2, capacity: 4, statusTx: "IN_PROGRESS", emoji: "🍫" },
-  { foodId: 7, foodName: "비비고 김밥김 10봉", expired: "2026-07-30", approvedCount: 0, capacity: 3, statusTx: "IN_PROGRESS", emoji: "🍙" },
-  { foodId: 8, foodName: "햇반 12개입", expired: "2026-10-10", approvedCount: 1, capacity: 2, statusTx: "IN_PROGRESS", emoji: "🍚" },
-  { foodId: 9, foodName: "초코파이 박스 24입", expired: "2026-09-05", approvedCount: 0, capacity: 4, statusTx: "IN_PROGRESS", emoji: "🍪" },
-  { foodId: 10, foodName: "참기름 320ml", expired: "2027-02-14", approvedCount: 1, capacity: 2, statusTx: "IN_PROGRESS", emoji: "🫒" },
-  { foodId: 11, foodName: "오뚜기 잼 (딸기)", expired: "2026-11-20", approvedCount: 0, capacity: 3, statusTx: "IN_PROGRESS", emoji: "🍓" },
-  { foodId: 12, foodName: "녹차티백 100개입", expired: "2027-01-30", approvedCount: 0, capacity: 5, statusTx: "INCOMPLETE", emoji: "🍵" },
-];
 
 const FILTERS = [
   { id: "ALL", label: "전체" },
@@ -35,21 +21,32 @@ export default function HomeScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState("ALL");
   const [sort, setSort] = useState("recent");
-  const [rows, setRows] = useState(HOME_ITEMS);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // GET /foods?status=&page=&size=  (백엔드 없으면 mock 폴백)
-  useEffect(() => {
+  const load = useCallback(() => {
     let alive = true;
-    const status = filter === "ALL" ? undefined : filter;
-    API.foods.list({ status, page: 0, size: 20 })
+    setLoading(true);
+    setError(null);
+    // status 없이 전체를 받아 클라이언트에서 필터/카운트 (탭 숫자 표시용)
+    API.foods.list({ page: 0, size: 100 })
       .then((data) => {
-        if (alive && data && Array.isArray(data.content) && data.content.length) setRows(data.content);
+        if (!alive) return;
+        setRows(data && Array.isArray(data.content) ? data.content : []);
       })
-      .catch(() => { if (alive) setRows(HOME_ITEMS); });
+      .catch((e) => { if (alive) setError(e); })
+      .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [filter]);
+  }, []);
 
-  const items = rows.filter((it) => filter === "ALL" || it.statusTx === filter);
+  useEffect(() => load(), [load]);
+
+  const inProgressCount = rows.filter((i) => i.statusTx === "IN_PROGRESS").length;
+  let items = rows.filter((it) => filter === "ALL" || it.statusTx === filter);
+  if (sort === "expiring") {
+    items = [...items].sort((a, b) => new Date(a.expired) - new Date(b.expired));
+  }
 
   return (
     <div className="home">
@@ -63,7 +60,7 @@ export default function HomeScreen() {
               버리지 말고 <em>이웃과 나눠요</em>
             </h1>
             <p className="home-hero-sub">
-              지금 <b>{HOME_ITEMS.filter((i) => i.statusTx === "IN_PROGRESS").length}개</b>의 미개봉 가공식품이 나눔을 기다리고 있어요.
+              지금 <b>{inProgressCount}개</b>의 미개봉 가공식품이 나눔을 기다리고 있어요.
             </p>
             <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
               <button className="btn primary lg" onClick={() => router.push("/register")}>
@@ -74,14 +71,14 @@ export default function HomeScreen() {
           </div>
           <div className="home-hero-art" aria-hidden="true">
             <div className="art-card art-1">
-              <Photo label="bread basket" emoji="🥐" />
+              <Photo label="냠냠" />
               <div className="art-card-meta">
                 <StatusBadge status="IN_PROGRESS" />
                 <span className="eyebrow" style={{ fontSize: 9.5 }}>D-12</span>
               </div>
             </div>
             <div className="art-card art-2">
-              <Photo label="canned tuna" emoji="🥫" />
+              <Photo label="냠냠" />
               <div className="art-card-meta">
                 <StatusBadge status="COMPLETED" />
                 <span className="eyebrow" style={{ fontSize: 9.5 }}>2/2</span>
@@ -98,7 +95,7 @@ export default function HomeScreen() {
           {FILTERS.map((f) => (
             <button key={f.id} className={`tab ${filter === f.id ? "on" : ""}`} onClick={() => setFilter(f.id)}>
               {f.label}
-              <span className="num">{f.id === "ALL" ? HOME_ITEMS.length : HOME_ITEMS.filter((it) => it.statusTx === f.id).length}</span>
+              <span className="num">{f.id === "ALL" ? rows.length : rows.filter((it) => it.statusTx === f.id).length}</span>
             </button>
           ))}
         </div>
@@ -110,20 +107,29 @@ export default function HomeScreen() {
       </div>
 
       {/* ============ Feed grid ============ */}
-      <div className="feed-grid">
-        {items.map((it) => (
-          <FoodCard key={it.foodId} item={it} onClick={() => router.push(`/foods/${it.foodId}`)} />
-        ))}
-        {items.length === 0 && (
-          <div style={{ gridColumn: "1/-1", padding: "80px 0", textAlign: "center", color: "var(--ink-4)" }}>
-            조건에 맞는 물품이 없어요
+      {loading ? (
+        <StateBox kind="loading" title="물품을 불러오는 중…" />
+      ) : error ? (
+        <StateBox
+          kind="error"
+          title="물품을 불러오지 못했어요"
+          sub={`서버에 연결할 수 없습니다. (${error.code || error.status || error.message || "네트워크 오류"})`}
+          onRetry={load}
+        />
+      ) : items.length === 0 ? (
+        <StateBox kind="empty" title="아직 등록된 물품이 없어요" sub="첫 번째 나눔을 등록해보세요." />
+      ) : (
+        <>
+          <div className="feed-grid">
+            {items.map((it) => (
+              <FoodCard key={it.foodId} item={it} onClick={() => router.push(`/foods/${it.foodId}`)} />
+            ))}
           </div>
-        )}
-      </div>
-
-      <div className="feed-foot">
-        <button className="btn ghost">더 보기</button>
-      </div>
+          <div className="feed-foot">
+            <button className="btn ghost">더 보기</button>
+          </div>
+        </>
+      )}
 
       <style>{`
         .home { padding: 0; }
@@ -168,9 +174,8 @@ export default function HomeScreen() {
 
 /* ============ Food Card ============ */
 function FoodCard({ item, onClick }) {
-  const today = new Date("2026-06-13");
   const expDate = new Date(item.expired);
-  const d = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+  const d = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
   const isExpired = item.statusTx === "EXPIRED";
   const dLabel = d < 0 ? `D+${Math.abs(d)}` : d === 0 ? "D-DAY" : `D-${d}`;
   const showDTag = item.statusTx === "IN_PROGRESS" || item.statusTx === "EXPIRED";
@@ -178,7 +183,7 @@ function FoodCard({ item, onClick }) {
   return (
     <button className="food-card card interactive" onClick={onClick}>
       <div className="food-card-img">
-        <Photo label="thumbnailUrl" emoji={item.emoji} />
+        <Photo label="냠냠" src={item.thumbnailUrl} />
         <div className="food-card-overlay">
           <StatusBadge status={item.statusTx} solid={item.statusTx === "IN_PROGRESS"} />
         </div>

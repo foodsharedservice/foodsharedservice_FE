@@ -1,14 +1,13 @@
 "use client";
 
 /* AuthScreens.jsx — D-00 로그인 / D-07 회원가입
-   API: POST /auth/login, POST /auth/email/send, POST /auth/email/verify,
-        GET /members/nickname/check, POST /members
-   백엔드가 없거나 CORS 실패 시에도 UI가 진행되도록 optimistic 처리. */
+   실제 API 인증 기반. 성공해야 화면이 진행되고, 실패 시 에러를 표시한다. */
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
-import { Photo } from "@/components/ui";
+import { Photo, FormError } from "@/components/ui";
+import { useAuth } from "@/components/AuthProvider";
 import API from "@/lib/api";
 
 /* ============ shared brand panel ============ */
@@ -40,13 +39,26 @@ function AuthBrandPane() {
 /* ============ D-00 LOGIN ============ */
 export function LoginScreen() {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
 
-  const submit = () => {
-    // POST /auth/login { email, password } → { memberId, nickName }
-    API.auth.login(email || "you@example.com", pw || "password").catch(() => {});
-    router.push("/");
+  const submit = async () => {
+    if (busy) return;
+    setError(null);
+    setBusy(true);
+    try {
+      // POST /auth/login { email, password } → { memberId, nickName }
+      const data = await API.auth.login(email, pw);
+      setUser(data || { nickName: email });
+      router.push("/");
+    } catch (e) {
+      setError(e.code === "LOGIN_FAILED" ? "이메일 또는 비밀번호가 일치하지 않아요." : (e.message || "로그인에 실패했어요."));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -70,12 +82,16 @@ export function LoginScreen() {
               onKeyDown={(e) => e.key === "Enter" && submit()} />
           </div>
 
+          <FormError>{error}</FormError>
+
           <div className="auth-links">
             <span>이메일 찾기</span>
             <span>비밀번호 찾기</span>
           </div>
 
-          <button className="btn primary lg" style={{ width: "100%" }} onClick={submit}>로그인</button>
+          <button className="btn primary lg" style={{ width: "100%" }} onClick={submit} disabled={busy || !email || !pw}>
+            {busy ? "로그인 중…" : "로그인"}
+          </button>
 
           <div className="auth-divider">또는</div>
 
@@ -97,54 +113,90 @@ export function SignupScreen() {
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState("");
   const [verified, setVerified] = useState(false);
+  const [emailToken, setEmailToken] = useState(null);
   const [seconds, setSeconds] = useState(0);
   const [pw, setPw] = useState("");
   const [road, setRoad] = useState("");
   const [detailAddr, setDetailAddr] = useState("");
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!codeSent || verified) return;
-    if (seconds <= 0) return;
+    if (!codeSent || verified || seconds <= 0) return;
     const t = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(t);
   }, [codeSent, verified, seconds]);
 
   const mmss = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
-  const checkNick = () => {
-    // GET /members/nickname/check?nickName= → { available }
-    API.members.checkNickname(nick)
-      .then((d) => setNickState(d && d.available === false ? "dup" : "ok"))
-      .catch(() => setNickState(nick.length >= 2 ? "ok" : "dup"));
+  const checkNick = async () => {
+    setError(null);
+    try {
+      const d = await API.members.checkNickname(nick); // { available }
+      setNickState(d && d.available ? "ok" : "dup");
+    } catch (e) {
+      setNickState(null);
+      setError(e.message || "닉네임 확인에 실패했어요.");
+    }
   };
 
-  const sendCode = () => {
-    // POST /auth/email/send { email } → { expiresIn }
-    API.auth.sendEmailCode(email).catch(() => {});
-    setCodeSent(true);
-    setVerified(false);
-    setSeconds(300); // 05:00
+  const sendCode = async () => {
+    setError(null);
+    try {
+      const d = await API.auth.sendEmailCode(email); // { expiresIn }
+      setCodeSent(true);
+      setVerified(false);
+      setSeconds((d && d.expiresIn) || 300);
+    } catch (e) {
+      setError(e.code === "EMAIL_DUPLICATED" ? "이미 가입된 이메일이에요." : (e.message || "코드 발송에 실패했어요."));
+    }
   };
 
-  const verifyCode = () => {
-    // POST /auth/email/verify { email, code } → { verified, emailVerifyToken }
-    API.auth.verifyEmailCode(email, code)
-      .then((d) => setVerified(d ? !!d.verified : true))
-      .catch(() => setVerified(code.length === 6));
-    if (code.length === 6) setVerified(true);
+  const verifyCode = async () => {
+    setError(null);
+    try {
+      const d = await API.auth.verifyEmailCode(email, code); // { verified, emailVerifyToken }
+      if (d && d.verified) {
+        setVerified(true);
+        setEmailToken(d.emailVerifyToken || null);
+      } else {
+        setError("인증 코드가 일치하지 않아요.");
+      }
+    } catch (e) {
+      const map = { CODE_MISMATCH: "인증 코드가 일치하지 않아요.", CODE_EXPIRED: "코드가 만료됐어요. 재발송해주세요." };
+      setError(map[e.code] || e.message || "인증에 실패했어요.");
+    }
   };
 
   // 비밀번호 규칙: 8-20자 + 영문 대소문자 + 특수문자
   const pwMet = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,20}$/.test(pw);
-  const canSubmit = nickState === "ok" && verified && pwMet && road.length > 0;
+  const canSubmit = nickState === "ok" && verified && pwMet && road.length > 0 && !busy;
 
-  const submit = () => {
-    // POST /members { email, emailVerifyToken, password, nickName, address }
-    API.members.signup({
-      email, emailVerifyToken: "verified-token", password: pw, nickName: nick,
-      address: { roadAddress: road, detailAddress: detailAddr },
-    }).catch(() => {});
-    router.push("/");
+  const submit = async () => {
+    if (!canSubmit) return;
+    setError(null);
+    setBusy(true);
+    try {
+      // POST /members { email, emailVerifyToken, password, nickName, address } → { memberId }
+      await API.members.signup({
+        email,
+        emailVerifyToken: emailToken,
+        password: pw,
+        nickName: nick,
+        address: { roadAddress: road, detailAddress: detailAddr },
+      });
+      router.push("/login");
+    } catch (e) {
+      const map = {
+        EMAIL_DUPLICATED: "이미 사용 중인 이메일이에요.",
+        NICKNAME_DUPLICATED: "이미 사용 중인 닉네임이에요.",
+        PASSWORD_POLICY_VIOLATION: "비밀번호 정책을 확인해주세요.",
+        EMAIL_NOT_VERIFIED: "이메일 인증을 먼저 완료해주세요.",
+      };
+      setError(map[e.code] || e.message || "회원가입에 실패했어요.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -219,14 +271,12 @@ export function SignupScreen() {
             </div>
             <input className="field-input" placeholder="상세주소 (선택)" style={{ marginTop: 8 }}
               value={detailAddr} onChange={(e) => setDetailAddr(e.target.value)} />
-            <div className="field-state muted" style={{ fontFamily: "var(--font-mono)", fontSize: 10.5 }}>
-              주소 검색 시 외부 우편번호 API 팝업 호출
-            </div>
           </div>
 
-          <button className="btn primary lg" style={{ width: "100%", marginTop: 6 }}
-            onClick={submit} disabled={!canSubmit}>
-            {canSubmit ? "가입 완료" : "필수 항목을 모두 입력해주세요"}
+          <FormError>{error}</FormError>
+
+          <button className="btn primary lg" style={{ width: "100%", marginTop: 6 }} onClick={submit} disabled={!canSubmit}>
+            {busy ? "가입 중…" : canSubmit ? "가입 완료" : "필수 항목을 모두 입력해주세요"}
           </button>
 
           <div className="auth-guest" onClick={() => router.push("/login")}>이미 계정이 있으신가요? 로그인 →</div>

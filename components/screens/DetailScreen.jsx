@@ -2,62 +2,49 @@
 
 /* DetailScreen.jsx — D-02 물품 상세
    API: GET /foods/{foodId}
-   Request action: POST /foods/{foodId}/requests  (no body) */
+   Request action: POST /foods/{foodId}/requests  (no body)
+   실제 API 데이터만 사용 (mock 폴백 없음). */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
-import { StatusBadge, Photo, Avatar, CapacityBar } from "@/components/ui";
+import { StatusBadge, Photo, Avatar, CapacityBar, StateBox } from "@/components/ui";
 import API from "@/lib/api";
-
-const DETAIL_DATA = {
-  foodId: 100,
-  ownerNickName: "sunny_kim",
-  foodName: "참치캔 6개입 (미개봉)",
-  expired: "2026-06-25",
-  capacity: 3,
-  approvedCount: 1,
-  details:
-    "동생이 사놓고 안 먹어서 나눔합니다. 박스째로 가져가셔도 좋고, 한 캔만 필요해도 환영해요. 모두 미개봉이고 직사광선 안 닿는 곳에 보관했습니다.\n\n픽업 가능 시간은 평일 저녁 7-9시, 주말 오후입니다. 서초역 2번 출구 인근에서 만나면 좋아요.",
-  statusTx: "IN_PROGRESS",
-  createdAt: "2026-06-13T10:32:00",
-  images: [
-    { imageId: 10, accessUrl: "https://.../1.jpg", imageType: "BASIC", label: "참치캔 — 전체", emoji: "🐟" },
-    { imageId: 11, accessUrl: "https://.../2.jpg", imageType: "BASIC", label: "참치캔 — 라벨", emoji: "📷" },
-    { imageId: 13, accessUrl: "https://.../3.jpg", imageType: "BASIC", label: "참치캔 — 박스", emoji: "📦" },
-    { imageId: 12, accessUrl: "https://.../exp.jpg", imageType: "EXPIRED", label: "소비기한 사진", emoji: "📅" },
-  ],
-};
 
 export default function DetailScreen({ foodId }) {
   const router = useRouter();
-  const [d, setD] = useState(DETAIL_DATA);
+  const [d, setD] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [photoIdx, setPhotoIdx] = useState(0);
   const [requestModal, setRequestModal] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+  const [reqError, setReqError] = useState(null);
   const [toast, setToast] = useState(null);
 
-  // GET /foods/{foodId} (백엔드 없으면 mock 유지)
-  useEffect(() => {
+  const load = useCallback(() => {
     let alive = true;
-    if (!foodId) return;
+    setLoading(true);
+    setError(null);
     API.foods.detail(foodId)
-      .then((data) => {
-        if (alive && data && data.images && data.images.length) {
-          setD(data);
-          setPhotoIdx(0);
-        }
-      })
-      .catch(() => {});
+      .then((data) => { if (alive) { setD(data); setPhotoIdx(0); } })
+      .catch((e) => { if (alive) setError(e); })
+      .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [foodId]);
 
-  const today = new Date("2026-06-13");
-  const expDate = new Date(d.expired);
-  const daysLeft = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+  useEffect(() => load(), [load]);
 
-  const prev = () => setPhotoIdx((i) => (i - 1 + d.images.length) % d.images.length);
-  const next = () => setPhotoIdx((i) => (i + 1) % d.images.length);
+  const images = (d && d.images) || [];
+
+  const prev = useCallback(() => {
+    if (!images.length) return;
+    setPhotoIdx((i) => (i - 1 + images.length) % images.length);
+  }, [images.length]);
+  const next = useCallback(() => {
+    if (!images.length) return;
+    setPhotoIdx((i) => (i + 1) % images.length);
+  }, [images.length]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -67,34 +54,76 @@ export default function DetailScreen({ foodId }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestModal, d.images.length]);
+  }, [requestModal, prev, next]);
 
-  const cur = d.images[photoIdx] || d.images[0];
+  if (loading) {
+    return (
+      <div className="detail">
+        <div className="detail-crumb">
+          <button className="crumb-back" onClick={() => router.push("/")}><Icon.ChevronLeft /> 홈으로</button>
+        </div>
+        <StateBox kind="loading" title="물품 정보를 불러오는 중…" />
+      </div>
+    );
+  }
+  if (error || !d) {
+    const notFound = error && error.status === 404;
+    return (
+      <div className="detail">
+        <div className="detail-crumb">
+          <button className="crumb-back" onClick={() => router.push("/")}><Icon.ChevronLeft /> 홈으로</button>
+        </div>
+        <StateBox
+          kind="error"
+          title={notFound ? "존재하지 않는 물품이에요" : "물품 정보를 불러오지 못했어요"}
+          sub={notFound ? "삭제되었거나 잘못된 주소일 수 있어요." : `서버에 연결할 수 없습니다. (${(error && (error.code || error.status || error.message)) || "네트워크 오류"})`}
+          onRetry={notFound ? undefined : load}
+        />
+      </div>
+    );
+  }
+
+  const expDate = new Date(d.expired);
+  const daysLeft = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
+  const cur = images[photoIdx] || images[0] || {};
   const isExpImage = cur.imageType === "EXPIRED";
 
   const submitRequest = () => {
+    setReqError(null);
     // POST /foods/{foodId}/requests → { requestFoodId, status:"REQUEST" }
-    API.requests.create(d.foodId).catch(() => {});
-    setRequestSent(true);
-    setTimeout(() => setRequestModal(false), 1400);
+    API.requests.create(d.foodId)
+      .then(() => {
+        setRequestSent(true);
+        setTimeout(() => setRequestModal(false), 1400);
+      })
+      .catch((e) => {
+        const map = {
+          REQUEST_DUPLICATED: "이미 요청한 물품이에요.",
+          SELF_REQUEST_NOT_ALLOWED: "본인이 등록한 물품에는 요청할 수 없어요.",
+          FOOD_NOT_AVAILABLE: "지금은 요청할 수 없는 상태예요 (완료/만료 등).",
+        };
+        setReqError(map[e.code] || e.message || "요청에 실패했어요.");
+      });
   };
 
   const openChat = () => {
     // POST /chat/rooms { foodId } → { roomId, foodId, created }
-    API.chat.createRoom(d.foodId).catch(() => {});
-    setToast(`@${d.ownerNickName} 님과의 채팅방을 열었어요`);
+    API.chat.createRoom(d.foodId)
+      .then(() => setToast(`@${d.ownerNickName} 님과의 채팅방을 열었어요`))
+      .catch((e) => {
+        const map = {
+          SELF_CHAT_NOT_ALLOWED: "본인 물품에는 채팅할 수 없어요.",
+          FOOD_NOT_AVAILABLE: "지금은 채팅방을 만들 수 없는 상태예요.",
+        };
+        setToast(map[e.code] || "채팅방을 열지 못했어요.");
+      });
     setTimeout(() => setToast(null), 2200);
   };
-
-  const relTime = "32분 전";
 
   return (
     <div className="detail">
       <div className="detail-crumb">
-        <button className="crumb-back" onClick={() => router.push("/")}>
-          <Icon.ChevronLeft /> 홈으로
-        </button>
+        <button className="crumb-back" onClick={() => router.push("/")}><Icon.ChevronLeft /> 홈으로</button>
         <span className="crumb-sep">/</span>
         <span style={{ color: "var(--ink)" }}>{d.foodName}</span>
       </div>
@@ -103,26 +132,32 @@ export default function DetailScreen({ foodId }) {
         {/* ============ Left: image carousel ============ */}
         <div className="detail-left">
           <div className="carousel">
-            <Photo label={cur.label} emoji={cur.emoji} className={isExpImage ? "exp-photo" : ""} />
+            <Photo label="냠냠" src={cur.accessUrl} className={isExpImage ? "exp-photo" : ""} />
             <div className="carousel-tl"><StatusBadge status={d.statusTx} solid /></div>
-            {isExpImage && (
-              <div className="carousel-tr exp-tag"><Icon.Calendar /> 소비기한 인증 사진</div>
+            {isExpImage && <div className="carousel-tr exp-tag"><Icon.Calendar /> 소비기한 인증 사진</div>}
+            {images.length > 0 && (
+              <div className="carousel-counter">
+                <span className="font-en">{photoIdx + 1}</span><span>/</span><span className="font-en">{images.length}</span>
+              </div>
             )}
-            <div className="carousel-counter">
-              <span className="font-en">{photoIdx + 1}</span><span>/</span><span className="font-en">{d.images.length}</span>
-            </div>
-            <button className="carousel-arrow left" onClick={prev} aria-label="이전"><Icon.ChevronLeft /></button>
-            <button className="carousel-arrow right" onClick={next} aria-label="다음"><Icon.ChevronRight /></button>
+            {images.length > 1 && (
+              <>
+                <button className="carousel-arrow left" onClick={prev} aria-label="이전"><Icon.ChevronLeft /></button>
+                <button className="carousel-arrow right" onClick={next} aria-label="다음"><Icon.ChevronRight /></button>
+              </>
+            )}
           </div>
 
-          <div className="carousel-thumbs">
-            {d.images.map((img, i) => (
-              <button key={img.imageId} className={`thumb ${i === photoIdx ? "on" : ""}`} onClick={() => setPhotoIdx(i)}>
-                <Photo label="" emoji={img.emoji} ratio="1/1" />
-                {img.imageType === "EXPIRED" && <div className="thumb-star">⭐</div>}
-              </button>
-            ))}
-          </div>
+          {images.length > 1 && (
+            <div className="carousel-thumbs">
+              {images.map((img, i) => (
+                <button key={img.imageId} className={`thumb ${i === photoIdx ? "on" : ""}`} onClick={() => setPhotoIdx(i)}>
+                  <Photo label="" src={img.accessUrl} ratio="1/1" />
+                  {img.imageType === "EXPIRED" && <div className="thumb-star">⭐</div>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ============ Right: info ============ */}
@@ -135,8 +170,7 @@ export default function DetailScreen({ foodId }) {
             </div>
           </div>
 
-          <div className="eyebrow" style={{ marginTop: 18 }}>{relTime}</div>
-          <h1 className="detail-title">{d.foodName}</h1>
+          <h1 className="detail-title" style={{ marginTop: 18 }}>{d.foodName}</h1>
 
           <div className="detail-info">
             <div className="info-row">
@@ -153,13 +187,17 @@ export default function DetailScreen({ foodId }) {
           </div>
 
           <div className="detail-desc">
-            {d.details.split("\n").map((p, i) => <p key={i}>{p}</p>)}
+            {(d.details || "").split("\n").map((p, i) => <p key={i}>{p}</p>)}
           </div>
 
           <div className="detail-cta-row">
             <button className="btn ghost lg" onClick={openChat}><Icon.Chat /> 채팅하기</button>
-            <button className="btn primary lg cta" onClick={() => setRequestModal(true)} disabled={d.approvedCount >= d.capacity}>
-              {d.approvedCount >= d.capacity ? "정원이 다 찼어요" : "나눔 요청 보내기"}
+            <button
+              className="btn primary lg cta"
+              onClick={() => { setReqError(null); setRequestSent(false); setRequestModal(true); }}
+              disabled={d.statusTx !== "IN_PROGRESS" || d.approvedCount >= d.capacity}
+            >
+              {d.statusTx !== "IN_PROGRESS" ? "요청할 수 없는 상태예요" : d.approvedCount >= d.capacity ? "정원이 다 찼어요" : "나눔 요청 보내기"}
             </button>
           </div>
           <div className="cta-hint">본인이 등록한 물품과 중복 요청은 보낼 수 없어요.</div>
@@ -170,12 +208,13 @@ export default function DetailScreen({ foodId }) {
         <RequestModal
           food={d}
           sent={requestSent}
-          onClose={() => { setRequestModal(false); setRequestSent(false); }}
+          error={reqError}
+          onClose={() => { setRequestModal(false); setRequestSent(false); setReqError(null); }}
           onSubmit={submitRequest}
         />
       )}
 
-      {toast && (<div className="detail-toast"><Icon.Chat /> {toast}</div>)}
+      {toast && <div className="detail-toast"><Icon.Chat /> {toast}</div>}
 
       <style>{`
         .detail { padding: 0 0 40px; }
@@ -232,7 +271,7 @@ export default function DetailScreen({ foodId }) {
 }
 
 /* ============ Request Modal ============ */
-function RequestModal({ food, sent, onClose, onSubmit }) {
+function RequestModal({ food, sent, error, onClose, onSubmit }) {
   return (
     <div className="modal-scrim" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -247,7 +286,7 @@ function RequestModal({ food, sent, onClose, onSubmit }) {
             </p>
 
             <div className="modal-summary">
-              <Photo label="" emoji="🐟" ratio="1/1" />
+              <Photo label="냠냠" src={(food.images && food.images[0] && food.images[0].accessUrl) || undefined} ratio="1/1" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700 }}>{food.foodName}</div>
                 <div style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 4 }}>
@@ -267,6 +306,12 @@ function RequestModal({ food, sent, onClose, onSubmit }) {
                 </ul>
               </div>
             </div>
+
+            {error && (
+              <div style={{ marginTop: 14, padding: "10px 12px", background: "#FBEAE5", border: "1px solid var(--danger-100)", borderRadius: 8, color: "var(--danger)", fontSize: 12.5 }}>
+                {error}
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
               <button className="btn ghost" style={{ flex: 1 }} onClick={onClose}>취소</button>
