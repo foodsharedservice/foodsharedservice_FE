@@ -182,6 +182,13 @@ export function SignupScreen() {
   // 비밀번호 규칙: 8-20자 + 영문 대소문자 + 특수문자
   const pwMet = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,20}$/.test(pw);
   const canSubmit = nickState === "ok" && verified && pwMet && road.length > 0 && !busy;
+  // 무엇이 빠졌는지 구체적으로 안내
+  const missing =
+    nickState !== "ok" ? "닉네임 중복확인을 해주세요" :
+    !verified ? "이메일 인증을 완료해주세요" :
+    !pwMet ? "비밀번호 조건을 확인해주세요 (대·소문자+특수문자 8–20자)" :
+    road.length === 0 ? "주소를 입력해주세요" :
+    null;
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -266,8 +273,9 @@ export function SignupScreen() {
             <div className="label">비밀번호</div>
             <input className="field-input" type="password" placeholder="••••••••••"
               value={pw} onChange={(e) => setPw(e.target.value)} />
-            <div className={`auth-rule ${pwMet ? "met" : ""}`}>
-              {pwMet ? <Icon.Check /> : <span style={{ width: 13, textAlign: "center" }}>·</span>}
+            <div className={`auth-rule ${pwMet ? "met" : ""}`}
+              style={!pwMet && pw.length > 0 ? { color: "var(--danger)" } : undefined}>
+              {pwMet ? <Icon.Check /> : pw.length > 0 ? <Icon.X /> : <span style={{ width: 13, textAlign: "center" }}>·</span>}
               영문 대·소문자 + 특수문자 포함 8–20자
             </div>
           </div>
@@ -287,7 +295,7 @@ export function SignupScreen() {
           <FormError>{error}</FormError>
 
           <button className="btn primary lg" style={{ width: "100%", marginTop: 6 }} onClick={submit} disabled={!canSubmit}>
-            {busy ? "가입 중…" : canSubmit ? "가입 완료" : "필수 항목을 모두 입력해주세요"}
+            {busy ? "가입 중…" : canSubmit ? "가입 완료" : (missing || "필수 항목을 모두 입력해주세요")}
           </button>
 
           <div className="auth-guest" onClick={() => router.push("/login")}>이미 계정이 있으신가요? 로그인 →</div>
