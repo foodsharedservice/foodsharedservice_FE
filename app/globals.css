@@ -954,25 +954,60 @@ ul, ol { list-style: none; }
 .viewport.mobile .tx-actions .btn { width: 100%; }
 
 /* =========================================================
-   REAL-APP SHELL (스튜디오/디바이스 프레임 대체)
-   라우팅 기반 실제 앱에서는 .shell/.studio-bar/.viewport/.device 를
-   사용하지 않습니다. 아래 래퍼가 헤더+콘텐츠를 풀폭으로 배치하고
-   알림 패널(absolute)의 기준 컨테이너 역할을 합니다.
+   고정 모바일 뷰 프레임
+   화면 해상도와 무관하게 항상 동일한 모바일 레이아웃을 보장한다.
+   앱 전체를 .viewport.mobile > .device 로 감싸 디자인 시스템의
+   모바일 레이아웃 규칙(.viewport.mobile .xxx)을 항상 활성화하고,
+   .device 를 고정 폭 + 페이지 스크롤 가능하도록 재정의한다.
    ========================================================= */
 .app-shell {
   position: relative;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  flex: 1;
 }
 .app-content {
   flex: 1;
   width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
 }
-.auth-shell {
+
+.viewport.mobile {
+  flex: none;
   min-height: 100vh;
-  background: var(--bg);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 16px;
+  background:
+    radial-gradient(1100px 600px at 50% -10%, #F2EDDF 0%, transparent 60%),
+    var(--bg);
+}
+.viewport.mobile .device {
+  width: 412px;
+  max-width: 100%;
+  min-height: calc(100vh - 48px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(31, 29, 24, 0.10), 0 4px 12px rgba(31, 29, 24, 0.05);
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+.viewport.mobile .device .app-header {
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+}
+
+/* 실제 모바일 단말에서는 풀블리드 */
+@media (max-width: 460px) {
+  .viewport.mobile { padding: 0; }
+  .viewport.mobile .device {
+    width: 100%;
+    min-height: 100vh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .viewport.mobile .device .app-header { border-radius: 0; }
 }
