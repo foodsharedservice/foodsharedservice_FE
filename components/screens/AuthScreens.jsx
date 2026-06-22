@@ -3,11 +3,12 @@
 /* AuthScreens.jsx — D-00 로그인 / D-07 회원가입
    실제 API 인증 기반. 성공해야 화면이 진행되고, 실패 시 에러를 표시한다. */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
 import { Photo, FormError } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
+import AddressSearch from "@/components/AddressSearch";
 import API from "@/lib/api";
 
 /* ============ shared brand panel ============ */
@@ -118,8 +119,18 @@ export function SignupScreen() {
   const [pw, setPw] = useState("");
   const [road, setRoad] = useState("");
   const [detailAddr, setDetailAddr] = useState("");
+  const [addrOpen, setAddrOpen] = useState(false);
+  const detailRef = useRef(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  // Daum 우편번호 검색 완료 → 도로명 주소 자동 입력 후 상세주소로 포커스
+  const handleAddress = useCallback((data) => {
+    const building = data.buildingName && data.buildingName !== "N" ? ` (${data.buildingName})` : "";
+    const road = data.roadAddress || data.autoRoadAddress || data.jibunAddress || "";
+    setRoad(road + building);
+    setTimeout(() => detailRef.current && detailRef.current.focus(), 50);
+  }, []);
 
   useEffect(() => {
     if (!codeSent || verified || seconds <= 0) return;
@@ -265,11 +276,11 @@ export function SignupScreen() {
           <div className="auth-field">
             <div className="label">주소</div>
             <div className="verify-row">
-              <input className="field-input" placeholder="도로명 주소" value={road}
-                onChange={(e) => setRoad(e.target.value)} />
-              <button className="btn ghost" onClick={() => setRoad(road || "서울 서초구 서초대로 396")}>주소 검색</button>
+              <input className="field-input" placeholder="도로명 주소 검색" value={road}
+                readOnly onClick={() => setAddrOpen(true)} style={{ cursor: "pointer" }} />
+              <button className="btn ghost" onClick={() => setAddrOpen(true)}>주소 검색</button>
             </div>
-            <input className="field-input" placeholder="상세주소 (선택)" style={{ marginTop: 8 }}
+            <input ref={detailRef} className="field-input" placeholder="상세주소 (선택)" style={{ marginTop: 8 }}
               value={detailAddr} onChange={(e) => setDetailAddr(e.target.value)} />
           </div>
 
@@ -282,6 +293,8 @@ export function SignupScreen() {
           <div className="auth-guest" onClick={() => router.push("/login")}>이미 계정이 있으신가요? 로그인 →</div>
         </div>
       </div>
+
+      <AddressSearch open={addrOpen} onClose={() => setAddrOpen(false)} onComplete={handleAddress} />
     </div>
   );
 }
