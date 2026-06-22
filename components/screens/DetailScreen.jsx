@@ -287,8 +287,8 @@ export default function DetailScreen({ foodId }) {
         .carousel-arrow:hover { background: #fff; transform: translateY(-50%) scale(1.06); }
         .carousel-arrow.left { left: 14px; }
         .carousel-arrow.right { right: 14px; }
-        .carousel-thumbs { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-        .thumb { position: relative; width: 76px; padding: 0; border-radius: 8px; overflow: hidden; background: transparent; border: 2px solid transparent; transition: all 0.12s; }
+        .carousel-thumbs { display: flex; gap: 8px; margin-top: 10px; }
+        .thumb { position: relative; flex: 1; padding: 0; border-radius: 8px; overflow: hidden; background: transparent; border: 2px solid transparent; transition: all 0.12s; }
         .thumb .ph { aspect-ratio: 1/1; border-radius: 6px; }
         .thumb:hover { border-color: var(--line-2); }
         .thumb.on { border-color: var(--primary); }
