@@ -960,7 +960,7 @@ ul, ol { list-style: none; }
    모바일 레이아웃 규칙(.viewport.mobile .xxx)을 항상 활성화한다.
    폭은 --frame-w 한 줄로 조정 가능.
    ========================================================= */
-:root { --frame-w: 480px; }
+:root { --frame-w: 980px; }
 
 .app-shell {
   position: relative;
