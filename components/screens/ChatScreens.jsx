@@ -53,23 +53,31 @@ export function ChatListScreen() {
     return () => { alive = false; };
   }, [authLoading, user, router]);
 
+  // 좌측 목록 헤더 — 우측 채팅방 헤더와 같은 높이(65px)로 맞춰 구분선이 한 줄로 이어지게 한다.
+  const Header = (
+    <div className="h-[65px] px-5 flex flex-col justify-center border-b border-border">
+      <h1 className="text-xl font-bold text-foreground leading-tight">채팅</h1>
+      <p className="text-xs text-muted-foreground mt-0.5">
+        {rooms && rooms.length > 0 ? `${rooms.length}개의 대화` : "대화 목록"}
+      </p>
+    </div>
+  );
+
   if (authLoading || rooms === null) {
     return (
-      <div className="w-full p-4 sm:p-5">
-        <StateBox kind="loading" title="채팅 목록을 불러오는 중…" />
+      <div className="w-full">
+        {Header}
+        <div className="p-4 sm:p-5">
+          <StateBox kind="loading" title="채팅 목록을 불러오는 중…" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full p-4 sm:p-5">
-      <div className="mb-4 px-0.5">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">채팅</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {rooms.length > 0 ? `${rooms.length}개의 대화` : "대화 목록"}
-        </p>
-      </div>
-
+    <div className="w-full">
+      {Header}
+      <div className="p-3 sm:p-4">
       {error ? (
         <StateBox kind="error" title="채팅을 불러오지 못했어요" sub={`(${error.code || error.status || "네트워크 오류"})`} />
       ) : rooms.length === 0 ? (
@@ -105,6 +113,7 @@ export function ChatListScreen() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -302,7 +311,7 @@ export function ChatRoomScreen({ roomId }) {
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-card">
+      <div className="flex items-center gap-2.5 px-4 h-[65px] border-b border-border bg-card">
         <button
           className="grid md:hidden w-8 h-8 place-items-center rounded-lg hover:bg-muted"
           onClick={() => router.push("/chat")}
