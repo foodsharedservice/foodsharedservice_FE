@@ -174,7 +174,7 @@ export default function DetailScreen({ foodId }) {
         {/* ============ Left: image carousel ============ */}
         <div className="detail-left">
           <div className="carousel">
-            <Photo label="냠냠" src={curUrl} />
+            <Photo label="나눔마켓" src={curUrl} />
             <div className="carousel-tl"><StatusBadge status={d.statusTx} solid /></div>
             {isExpImage && (
               <div className="carousel-tr exp-tag"><Icon.Calendar /> 소비기한 인증 사진</div>
@@ -447,7 +447,7 @@ function RequestModal({ food, sent, error, onClose, onSubmit }) {
             </p>
 
             <div className="modal-summary">
-              <Photo label="냠냠" src={(food.images && food.images[0] && food.images[0].accessUrl) || undefined} ratio="1/1" />
+              <Photo label="나눔마켓" src={(food.images && food.images[0] && food.images[0].accessUrl) || undefined} ratio="1/1" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700 }}>{food.foodName}</div>
                 <div style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 4 }}>

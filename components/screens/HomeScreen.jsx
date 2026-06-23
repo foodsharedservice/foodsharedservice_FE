@@ -1,26 +1,66 @@
 "use client";
 
-/* HomeScreen.jsx — D-01 홈 피드
-   API: GET /foods?status={status}&page={page}&size={size}
+/* HomeScreen.jsx — 나눔마켓 홈 (Warm Market)
+   히어로 + 서비스 소개 + 실시간 나눔 피드(무한 스크롤) + CTA + 푸터
+   API: GET /foods (목록·무한스크롤), GET /foods/recent (히어로 미리보기)
    실제 API 데이터만 사용 (mock 폴백 없음). 실패 시 에러 UI 표시. */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Icon from "@/components/icons";
-import { StatusBadge, Photo, StateBox, Spinner } from "@/components/ui";
+import {
+  ArrowRight, Calendar, Users, ShieldCheck, Heart, Zap, Sprout, ChevronDown,
+} from "lucide-react";
+import { StateBox, Spinner } from "@/components/ui";
+import { useAuth } from "@/components/AuthProvider";
 import API from "@/lib/api";
+
+const HERO_IMG =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663787031264/X9QCmjHK3KpAWyKFiSUYQq/hero-food-sharing-ntYUJHbVS9Xr28czMMtfkh.webp";
 
 const FILTERS = [
   { id: "ALL", label: "전체" },
-  { id: "IN_PROGRESS", label: "진행중" },
-  { id: "COMPLETED", label: "완료" },
-  { id: "EXPIRED", label: "만료" },
+  { id: "IN_PROGRESS", label: "나눔중" },
+  { id: "COMPLETED", label: "나눔완료" },
+  { id: "EXPIRED", label: "기간만료" },
 ];
+
+const STATUS_LABELS = {
+  IN_PROGRESS: "나눔중",
+  COMPLETED: "나눔완료",
+  INCOMPLETE: "나눔취소",
+  EXPIRED: "기간만료",
+};
 
 const PAGE_SIZE = 50; // 백엔드 최대 페이지 크기
 
+function daysUntil(dateStr) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const exp = new Date(dateStr); exp.setHours(0, 0, 0, 0);
+  return Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+}
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+}
+function expiryBadgeClass(dateStr) {
+  const days = daysUntil(dateStr);
+  if (days <= 7) return "bg-red-100 text-red-700";
+  if (days <= 30) return "bg-yellow-100 text-yellow-700";
+  return "bg-green-100 text-green-700";
+}
+function statusBadgeClass(status) {
+  return ({
+    IN_PROGRESS: "badge-in-progress",
+    COMPLETED: "badge-completed",
+    INCOMPLETE: "badge-incomplete",
+    EXPIRED: "badge-expired",
+  })[status] || "badge-in-progress";
+}
+
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [filter, setFilter] = useState("ALL");
   const [sort, setSort] = useState("recent");
   const [rows, setRows] = useState([]);
@@ -29,7 +69,6 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [heroFoods, setHeroFoods] = useState(null); // 히어로 대표사진(최근 등록 2개) — null=로딩전/실패
   const sentinelRef = useRef(null);
 
   // 정렬은 서버 sort 파라미터로 처리 (허용 필드: foodId, expired, capacity)
@@ -65,20 +104,6 @@ export default function HomeScreen() {
 
   useEffect(() => load(), [load]);
 
-  // 히어로 placeholder 카드 → 최근 등록 음식 2개의 대표사진으로 교체.
-  // 로딩 전·실패 시에는 heroFoods를 채우지 않아 기존 placeholder가 유지된다.
-  useEffect(() => {
-    let alive = true;
-    API.foods.recent({ size: 2 })
-      .then((data) => {
-        if (!alive) return;
-        const list = Array.isArray(data) ? data : (data && Array.isArray(data.content) ? data.content : []);
-        if (list.length > 0) setHeroFoods(list.slice(0, 2));
-      })
-      .catch(() => {}); // 실패 시 placeholder 유지
-    return () => { alive = false; };
-  }, []);
-
   const loadMore = () => {
     if (loadingMore) return;
     setLoadingMore(true);
@@ -108,189 +133,266 @@ export default function HomeScreen() {
   const items = rows.filter((it) => filter === "ALL" || it.statusTx === filter);
 
   return (
-    <div className="home">
+    <div className="min-h-screen">
       {/* ============ Hero ============ */}
-      <section className="home-hero">
-        <div className="home-hero-inner">
-          <div className="home-hero-text">
-            <div className="eyebrow" style={{ color: "var(--primary)" }}>FOOD SHARING SERVICE</div>
-            <h1 className="home-hero-title">
-              미개봉 식품, <br />
-              버리지 말고 <em>이웃과 나눠요</em>
+      <section className="relative min-h-screen flex items-center overflow-hidden">
+        <div className="absolute inset-0 z-0 bg-olive">
+          <img src={HERO_IMG} alt="음식 나눔" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+        </div>
+
+        <div className="relative z-10 container pt-24 pb-16">
+          <div className="max-w-xl">
+            <span className="animate-fade-in-up inline-block mb-6 rounded-full bg-amber/20 text-amber-light border border-amber/30 backdrop-blur-sm px-3 py-1 text-sm font-medium">
+              🌱 음식 낭비를 줄이는 따뜻한 방법
+            </span>
+            <h1 className="animate-fade-in-up stagger-1 text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
+              남은 음식의<br />
+              <span className="text-amber-light">새 주인</span>을<br />
+              찾아드립니다
             </h1>
-            <p className="home-hero-sub">
-              지금 <b>{inProgressCount}개</b>의 미개봉 가공식품이 나눔을 기다리고 있어요.
+            <p className="animate-fade-in-up stagger-2 text-lg text-white/80 mb-8 leading-relaxed">
+              미개봉 가공식품을 이웃과 나눠요.<br />
+              소비기한 AI 인식으로 안전하게, 채팅으로 편리하게.
             </p>
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-              <button className="btn primary lg" onClick={() => router.push("/register")}>
-                <Icon.Plus /> 나눔 등록하기
+            <div className="animate-fade-in-up stagger-3 flex flex-wrap gap-3">
+              <button
+                onClick={() => document.getElementById("feed")?.scrollIntoView({ behavior: "smooth" })}
+                className="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-amber text-white font-semibold shadow-warm-lg hover:bg-amber-dark transition-colors"
+              >
+                나눔 물품 보기 <ArrowRight className="w-4 h-4" />
               </button>
-              <button className="btn ghost lg">사용 안내</button>
+              <button
+                onClick={() => router.push(user ? "/register" : "/signup")}
+                className="h-12 px-6 rounded-full bg-white/10 border border-white/30 text-white backdrop-blur-sm hover:bg-white/20 transition-colors font-semibold"
+              >
+                {user ? "물품 등록하기" : "무료로 시작하기"}
+              </button>
+            </div>
+            <div className="animate-fade-in-up stagger-4 flex gap-8 mt-12">
+              <Stat value={`${inProgressCount}+`} label="지금 나눔중" />
+              <Stat value={`${rows.length}+`} label="등록된 물품" />
+              <Stat value="AI" label="소비기한 인식" />
             </div>
           </div>
-          <div className="home-hero-art" aria-hidden="true">
-            <HeroCard className="art-1" food={heroFoods?.[0]} fallback={{ status: "IN_PROGRESS", label: "D-12" }} />
-            <HeroCard className="art-2" food={heroFoods?.[1]} fallback={{ status: "COMPLETED", label: "2/2" }} />
-            <div className="art-tag">미개봉 · 가공식품만</div>
+        </div>
+
+        <button
+          onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce"
+          aria-label="아래로"
+        >
+          <span className="block w-6 h-10 rounded-full border-2 border-white/40 flex items-start justify-center pt-2">
+            <span className="w-1 h-2 bg-white/60 rounded-full" />
+          </span>
+        </button>
+      </section>
+
+      {/* ============ Features ============ */}
+      <section id="features" className="py-20 bg-background">
+        <div className="container">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold text-foreground mb-4">왜 나눔마켓인가요?</h2>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+              안전하고 신뢰할 수 있는 음식 나눔을 위한 세 가지 약속
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { icon: <ShieldCheck className="w-7 h-7" />, title: "AI 소비기한 인식", desc: "소비기한 사진을 찍으면 AI가 날짜를 자동으로 인식합니다. 안전한 식품만 나눔할 수 있어요.", color: "bg-green-50 text-green-600", delay: "stagger-1" },
+              { icon: <Heart className="w-7 h-7" />, title: "이웃과 함께", desc: "가공식품·미개봉 식품만 등록 가능해 위생 걱정 없이 나눔에 참여할 수 있습니다.", color: "bg-amber/10 text-amber-dark", delay: "stagger-2" },
+              { icon: <Zap className="w-7 h-7" />, title: "실시간 채팅", desc: "나눔 신청 후 등록자와 1:1 채팅으로 수령 장소와 시간을 편리하게 조율하세요.", color: "bg-blue-50 text-blue-600", delay: "stagger-3" },
+            ].map((f) => (
+              <div key={f.title} className={`animate-fade-in-up ${f.delay} bg-card rounded-2xl p-8 border border-border shadow-warm`}>
+                <div className={`w-14 h-14 rounded-2xl ${f.color} flex items-center justify-center mb-5`}>{f.icon}</div>
+                <h3 className="text-xl font-bold text-foreground mb-3">{f.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ============ Feed toolbar ============ */}
-      <div className="feed-toolbar">
-        <div className="tab-row">
-          {FILTERS.map((f) => (
-            <button key={f.id} className={`tab ${filter === f.id ? "on" : ""}`} onClick={() => setFilter(f.id)}>
-              {f.label}
-              <span className="num">{f.id === "ALL" ? rows.length : rows.filter((it) => it.statusTx === f.id).length}</span>
+      {/* ============ 나눔 피드 ============ */}
+      <section id="feed" className="py-16 bg-cream border-t border-border scroll-mt-16">
+        <div className="container">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+            <div>
+              <h2 className="text-3xl font-bold text-foreground mb-2">나눔 물품 목록</h2>
+              <p className="text-muted-foreground">이웃이 나눔하는 미개봉 가공식품을 찾아보세요</p>
+            </div>
+            <button
+              onClick={() => setSort(sort === "recent" ? "expiring" : "recent")}
+              className="self-start sm:self-auto inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-card border border-border text-sm font-medium text-foreground/80 hover:border-amber hover:text-amber transition-colors"
+            >
+              {sort === "recent" ? "최신순" : "마감 임박순"} <ChevronDown className="w-4 h-4" />
             </button>
-          ))}
+          </div>
+
+          {/* 필터 칩 */}
+          <div className="flex gap-2 flex-wrap mb-8">
+            {FILTERS.map((f) => {
+              const count = f.id === "ALL" ? rows.length : rows.filter((it) => it.statusTx === f.id).length;
+              const on = filter === f.id;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setFilter(f.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${on ? "bg-amber text-white shadow-warm" : "bg-card text-muted-foreground border border-border hover:border-amber hover:text-amber"}`}
+                >
+                  {f.label} <span className="opacity-70">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {loading ? (
+            <StateBox kind="loading" title="물품을 불러오는 중…" />
+          ) : error ? (
+            <StateBox
+              kind="error"
+              title="물품을 불러오지 못했어요"
+              sub={`서버에 연결할 수 없습니다. (${error.code || error.status || error.message || "네트워크 오류"})`}
+              onRetry={load}
+            />
+          ) : items.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">🍱</div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">물품이 없어요</h3>
+              <p className="text-muted-foreground mb-6">아직 등록된 나눔 물품이 없어요.</p>
+              {user && (
+                <button onClick={() => router.push("/register")} className="h-11 px-6 rounded-full bg-amber text-white font-semibold hover:bg-amber-dark transition-colors">
+                  첫 번째 물품 등록하기
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {items.map((food, i) => (
+                  <div key={food.foodId} className={`animate-fade-in-up stagger-${Math.min(i + 1, 6)}`}>
+                    <FoodCard food={food} onClick={() => router.push(`/foods/${food.foodId}`)} />
+                  </div>
+                ))}
+              </div>
+              {hasNext && (
+                <div ref={sentinelRef} className="flex justify-center pt-10">
+                  {loadingMore && <Spinner size={24} />}
+                </div>
+              )}
+            </>
+          )}
         </div>
-        <div className="sort-wrap">
-          <button className="sort-btn" onClick={() => setSort(sort === "recent" ? "expiring" : "recent")}>
-            {sort === "recent" ? "최신순" : "마감 임박순"} <Icon.ChevronDown />
+      </section>
+
+      {/* ============ CTA ============ */}
+      <section className="py-20 bg-amber relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-white translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-white -translate-x-1/2 translate-y-1/2" />
+        </div>
+        <div className="container relative z-10 text-center">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4">지금 바로 나눔을 시작해보세요</h2>
+          <p className="text-white/85 text-lg mb-8 max-w-md mx-auto">남은 식품을 이웃과 나누고, 음식 낭비를 함께 줄여나가요.</p>
+          <button
+            onClick={() => router.push(user ? "/register" : "/signup")}
+            className="h-12 px-8 rounded-full bg-white text-primary hover:bg-white/90 font-bold shadow-warm-lg transition-colors"
+          >
+            {user ? "물품 등록하기" : "무료 회원가입"}
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* ============ Feed grid ============ */}
-      {loading ? (
-        <StateBox kind="loading" title="물품을 불러오는 중…" />
-      ) : error ? (
-        <StateBox
-          kind="error"
-          title="물품을 불러오지 못했어요"
-          sub={`서버에 연결할 수 없습니다. (${error.code || error.status || error.message || "네트워크 오류"})`}
-          onRetry={load}
-        />
-      ) : items.length === 0 ? (
-        <StateBox kind="empty" title="아직 등록된 물품이 없어요" sub="첫 번째 나눔을 등록해보세요." />
-      ) : (
-        <>
-          <div className="feed-grid">
-            {items.map((it) => (
-              <FoodCard key={it.foodId} item={it} onClick={() => router.push(`/foods/${it.foodId}`)} />
-            ))}
-          </div>
-          {hasNext && (
-            <div className="feed-foot" ref={sentinelRef}>
-              {loadingMore && <Spinner size={24} />}
+      {/* ============ Footer ============ */}
+      <footer className="bg-foreground text-white/60 py-10">
+        <div className="container">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-lg bg-amber text-white grid place-items-center"><Sprout className="w-4 h-4" /></span>
+              <span className="text-white font-semibold">나눔마켓</span>
             </div>
-          )}
-        </>
-      )}
-
-      <style>{`
-        .home { padding: 0; }
-        .home-hero {
-          padding: 36px 32px 28px;
-          background:
-            radial-gradient(800px 240px at 80% -10%, var(--accent-50) 0%, transparent 50%),
-            linear-gradient(180deg, var(--primary-50) 0%, transparent 70%);
-          border-bottom: 1px solid var(--line);
-        }
-        .home-hero-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
-        .home-hero-title { font-size: 40px; font-weight: 800; line-height: 1.18; letter-spacing: -0.025em; margin-top: 12px; color: var(--ink); }
-        .home-hero-title em { font-style: normal; color: var(--primary); position: relative; display: inline-block; }
-        .home-hero-title em::after { content: ""; position: absolute; left: -2px; right: -2px; bottom: 2px; height: 10px; background: var(--accent); opacity: 0.42; z-index: -1; border-radius: 4px; }
-        .home-hero-sub { font-size: 15px; color: var(--ink-3); margin-top: 14px; line-height: 1.6; }
-        .home-hero-sub b { color: var(--primary); font-weight: 700; }
-        .home-hero-art { position: relative; height: 260px; }
-        .art-card { position: absolute; width: 200px; background: var(--surface); border-radius: 12px; border: 1px solid var(--line); box-shadow: var(--shadow-pop); padding: 8px; transform-origin: center; }
-        .art-card .ph { aspect-ratio: 4/3; }
-        .art-card-meta { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px 2px; }
-        .art-1 { top: 0; left: 30px; transform: rotate(-4deg); }
-        .art-2 { bottom: 0; right: 20px; transform: rotate(3deg); }
-        .art-tag { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-2deg); background: var(--ink); color: var(--bg); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 12px; border-radius: 4px; white-space: nowrap; z-index: 2; }
-        .feed-toolbar { display: flex; align-items: flex-end; gap: 24px; padding: 28px 32px 0; border-bottom: 1px solid var(--line); }
-        .sort-wrap { margin-left: auto; padding-bottom: 10px; }
-        .sort-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 8px; color: var(--ink-2); font-size: 12.5px; font-weight: 500; }
-        .sort-btn:hover { background: var(--bg-2); }
-        .feed-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px 18px; padding: 24px 32px 32px; }
-        .feed-foot { display: flex; justify-content: center; padding: 0 0 48px; }
-        @media (max-width: 900px) {
-          .home-hero { padding: 20px 16px 18px; }
-          .home-hero-inner { grid-template-columns: 1fr; gap: 16px; }
-          .home-hero-title { font-size: 26px; }
-          .home-hero-art { height: 150px; order: -1; }
-          .feed-toolbar { padding: 16px 16px 0; gap: 12px; }
-          .feed-grid { grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
-        }
-      `}</style>
+            <p className="text-sm text-center">© 2026 나눔마켓. 음식 낭비를 줄이는 따뜻한 커뮤니티.</p>
+            <div className="flex gap-4 text-sm">
+              <span className="hover:text-white transition-colors cursor-pointer">이용약관</span>
+              <span className="hover:text-white transition-colors cursor-pointer">개인정보처리방침</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
 
-/* ============ Hero Card ============
-   히어로 대표사진 카드. food가 있으면 최근 등록 음식의 대표사진/상태/라벨을,
-   없으면(로딩 전·실패) fallback placeholder를 렌더링한다.
-   라벨: 완료(COMPLETED)면 n/N(승인/정원), 그 외에는 D-day. */
-function heroDLabel(food) {
-  if (food.statusTx === "COMPLETED") return `${food.approvedCount}/${food.capacity}`;
-  const d = Math.ceil((new Date(food.expired) - new Date()) / (1000 * 60 * 60 * 24));
-  return d < 0 ? `D+${Math.abs(d)}` : d === 0 ? "D-DAY" : `D-${d}`;
-}
-
-function HeroCard({ className, food, fallback }) {
-  const status = food ? food.statusTx : fallback.status;
-  const label = food ? heroDLabel(food) : fallback.label;
+function Stat({ value, label }) {
   return (
-    <div className={`art-card ${className}`}>
-      <Photo label="냠냠" src={food?.thumbnailUrl} />
-      <div className="art-card-meta">
-        <StatusBadge status={status} />
-        <span className="eyebrow" style={{ fontSize: 9.5 }}>{label}</span>
-      </div>
+    <div>
+      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="text-sm text-white/60">{label}</div>
     </div>
   );
 }
 
-/* ============ Food Card ============ */
-function FoodCard({ item, onClick }) {
-  const expDate = new Date(item.expired);
-  const d = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
-  const isExpired = item.statusTx === "EXPIRED";
-  const dLabel = d < 0 ? `D+${Math.abs(d)}` : d === 0 ? "D-DAY" : `D-${d}`;
-  const showDTag = item.statusTx === "IN_PROGRESS" || item.statusTx === "EXPIRED";
+/* ============ Food Card (Warm Market) ============ */
+function FoodCard({ food, onClick }) {
+  const daysLeft = daysUntil(food.expired);
+  const isFull = food.approvedCount >= food.capacity;
+  const overlay = food.statusTx === "COMPLETED" || food.statusTx === "INCOMPLETE";
 
   return (
-    <button className="food-card card interactive" onClick={onClick}>
-      <div className="food-card-img">
-        <Photo label="냠냠" src={item.thumbnailUrl} />
-        <div className="food-card-overlay">
-          <StatusBadge status={item.statusTx} solid={item.statusTx === "IN_PROGRESS"} />
-        </div>
-        {showDTag && <div className={`d-tag ${isExpired ? "expired" : ""}`}>{dLabel}</div>}
-      </div>
-      <div className="food-card-body">
-        <div className="food-card-title">{item.foodName}</div>
-        <div className="food-card-meta">
-          <span className="food-card-exp">
-            <span className="eyebrow" style={{ fontSize: 9.5, marginRight: 4 }}>소비기한</span>
-            <span className="font-en">{item.expired}</span>
+    <button
+      onClick={onClick}
+      className="group w-full text-left bg-card rounded-2xl overflow-hidden card-lift border border-border shadow-warm"
+    >
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+        {food.thumbnailUrl ? (
+          <img
+            src={food.thumbnailUrl}
+            alt={food.foodName}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full grid place-items-center text-4xl bg-muted">🍱</div>
+        )}
+        <div className="absolute top-3 left-3">
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusBadgeClass(food.statusTx)}`}>
+            {STATUS_LABELS[food.statusTx]}
           </span>
-          <span className="food-card-cap">
-            <span className="cap-num">{item.approvedCount}/{item.capacity}</span>
-            <span style={{ color: "var(--ink-4)" }}>명</span>
-          </span>
         </div>
+        {overlay && (
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+            <span className="text-white font-bold text-lg drop-shadow">
+              {food.statusTx === "COMPLETED" ? "나눔완료" : "나눔취소"}
+            </span>
+          </div>
+        )}
       </div>
 
-      <style>{`
-        .food-card { padding: 0; overflow: hidden; text-align: left; cursor: pointer; display: flex; flex-direction: column; }
-        .food-card-img { position: relative; padding: 10px 10px 0; }
-        .food-card-img .ph { aspect-ratio: 4/3; }
-        .food-card-overlay { position: absolute; top: 18px; left: 18px; }
-        .d-tag { position: absolute; top: 18px; right: 18px; background: rgba(31,29,24,0.78); color: var(--bg); font-family: var(--font-en); font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; padding: 3px 7px; border-radius: 4px; backdrop-filter: blur(6px); }
-        .d-tag.expired { background: var(--danger); }
-        .food-card-body { padding: 14px 14px 14px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
-        .food-card-title { font-size: 14.5px; font-weight: 700; color: var(--ink); line-height: 1.4; letter-spacing: -0.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .food-card-meta { display: flex; align-items: baseline; justify-content: space-between; margin-top: auto; padding-top: 8px; font-size: 11.5px; color: var(--ink-3); gap: 8px; border-top: 1px dashed var(--line); }
-        .food-card-exp { display: inline-flex; align-items: baseline; min-width: 0; overflow: hidden; }
-        .food-card-exp .font-en { font-family: var(--font-en); color: var(--ink-2); font-weight: 600; font-size: 11.5px; white-space: nowrap; }
-        .food-card-cap { display: inline-flex; align-items: baseline; gap: 2px; white-space: nowrap; }
-        .cap-num { font-family: var(--font-en); font-weight: 700; color: var(--primary); }
-      `}</style>
+      <div className="p-4">
+        <h3 className="font-semibold text-foreground text-base leading-snug line-clamp-2 mb-3 min-h-[2.6em]">
+          {food.foodName}
+        </h3>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            <span className="text-xs text-muted-foreground">{formatDate(food.expired)}</span>
+            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ml-auto ${expiryBadgeClass(food.expired)}`}>
+              {daysLeft <= 0 ? "만료됨" : `D-${daysLeft}`}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            <span className="text-xs text-muted-foreground">{food.approvedCount} / {food.capacity}명</span>
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden ml-1">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${isFull ? "bg-muted-foreground" : "bg-amber"}`}
+                style={{ width: `${Math.min((food.approvedCount / food.capacity) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </button>
   );
 }

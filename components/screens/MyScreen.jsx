@@ -163,7 +163,7 @@ export default function MyScreen() {
               <div className="my-list">
                 {filtered.map((f) => (
                   <div className="my-row" key={f.foodId}>
-                    <Photo label="냠냠" src={f.thumbnailUrl || undefined} ratio="1/1" />
+                    <Photo label="나눔마켓" src={f.thumbnailUrl || undefined} ratio="1/1" />
                     <div className="my-row-body">
                       <div className="my-row-name">{f.foodName}</div>
                       <div className="my-row-exp">소비기한 {f.expired}</div>
@@ -268,7 +268,7 @@ function MySentRequests() {
         <div className="my-list">
           {list.map((r) => (
             <div className="my-row" key={r.requestId}>
-              <Photo label="냠냠" src={r.thumbnailUrl || undefined} ratio="1/1" />
+              <Photo label="나눔마켓" src={r.thumbnailUrl || undefined} ratio="1/1" />
               <div className="my-row-body">
                 <div className="my-row-name">{r.foodName || "물품"}</div>
                 {r.ownerNickName && <div className="my-row-exp">등록자 {r.ownerNickName}</div>}

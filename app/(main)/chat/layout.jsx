@@ -19,7 +19,7 @@ export default function ChatLayout({ children }) {
       <section className="chat-pane-room">{children}</section>
 
       <style>{`
-        .chat-shell { display: flex; height: calc(100vh - 61px); max-width: 1100px; width: 100%; margin: 0 auto; }
+        .chat-shell { display: flex; height: calc(100vh - 64px); max-width: 1100px; width: 100%; margin: 0 auto; }
         .chat-pane-list { width: 360px; flex-shrink: 0; height: 100%; overflow-y: auto; border-right: 1px solid var(--line); }
         .chat-pane-room { flex: 1; min-width: 0; height: 100%; }
         @media (max-width: 900px) {

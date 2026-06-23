@@ -7,10 +7,10 @@ import { useState } from "react";
 /* ============ Status Badge ============ */
 export function StatusBadge({ status, solid = false }) {
   const map = {
-    IN_PROGRESS: { cls: "progress", label: "진행중" },
-    COMPLETED: { cls: "done", label: "완료" },
-    EXPIRED: { cls: "expired", label: "만료" },
-    INCOMPLETE: { cls: "incomplete", label: "미완료" },
+    IN_PROGRESS: { cls: "progress", label: "나눔중" },
+    COMPLETED: { cls: "done", label: "나눔완료" },
+    EXPIRED: { cls: "expired", label: "기간만료" },
+    INCOMPLETE: { cls: "incomplete", label: "나눔취소" },
   };
   const s = map[status] || map.IN_PROGRESS;
   return <span className={`badge ${solid ? "solid " : ""}${s.cls}`}>{s.label}</span>;
