@@ -13,7 +13,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Icon from "@/components/icons";
+import {
+  Package,
+  FileText,
+  MessageSquare,
+  Edit2,
+  Trash2,
+  PlusCircle,
+  Minus,
+  X,
+  Check,
+  LogOut,
+} from "lucide-react";
 import { Photo, StatusBadge, Avatar, StateBox } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
 import AddressSearch from "@/components/AddressSearch";
@@ -84,15 +95,23 @@ export default function MyScreen() {
   };
 
   if (authLoading || (user && loading)) {
-    return <div className="my"><StateBox kind="loading" title="내 정보를 불러오는 중…" /></div>;
+    return (
+      <div className="min-h-screen bg-background pt-20">
+        <div className="container py-8">
+          <StateBox kind="loading" title="내 정보를 불러오는 중…" />
+        </div>
+      </div>
+    );
   }
   if (!user) return null;
   if (error) {
     return (
-      <div className="my">
-        <StateBox kind="error" title="내 정보를 불러오지 못했어요"
-          sub={`서버에 연결할 수 없습니다. (${error.code || error.status || error.message || "네트워크 오류"})`}
-          onRetry={() => router.refresh()} />
+      <div className="min-h-screen bg-background pt-20">
+        <div className="container py-8">
+          <StateBox kind="error" title="내 정보를 불러오지 못했어요"
+            sub={`서버에 연결할 수 없습니다. (${error.code || error.status || error.message || "네트워크 오류"})`}
+            onRetry={() => router.refresh()} />
+        </div>
       </div>
     );
   }
@@ -109,100 +128,195 @@ export default function MyScreen() {
   });
 
   return (
-    <div className="my">
-      <div className="my-head">
-        <div className="eyebrow" style={{ color: "var(--primary)" }}>MY PAGE</div>
+    <div className="min-h-screen bg-background pt-20">
+      {/* ============ Cream header band ============ */}
+      <div className="bg-cream border-b border-border">
+        <div className="container py-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-amber text-white grid place-items-center text-2xl font-bold flex-shrink-0">
+                  {(p.nickName || "U").trim().charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-lg font-bold text-foreground truncate">{p.nickName}</div>
+                  <div className="text-sm text-muted-foreground truncate">{p.email}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col">
+                  <span className="text-xl font-extrabold text-foreground">{total}</span>
+                  <span className="text-xs text-muted-foreground">등록</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xl font-extrabold text-foreground">{activeCount}</span>
+                  <span className="text-xs text-muted-foreground">진행중</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xl font-extrabold text-foreground">{completedCount}</span>
+                  <span className="text-xs text-muted-foreground">완료</span>
+                </div>
+              </div>
+
+              <h1 className="text-3xl font-extrabold text-foreground">내 나눔 활동</h1>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  className="inline-flex items-center gap-1.5 text-sm text-foreground hover:text-amber px-3 py-1.5 rounded-lg border border-border bg-card hover:border-amber transition-colors"
+                  onClick={() => setEditOpen(true)}
+                >
+                  <Edit2 className="w-4 h-4" /> 정보 수정
+                </button>
+                <button
+                  className="inline-flex items-center gap-1.5 text-sm text-foreground hover:text-amber px-3 py-1.5 rounded-lg border border-border bg-card hover:border-amber transition-colors"
+                  onClick={() => router.push("/chat")}
+                >
+                  <MessageSquare className="w-4 h-4" /> 채팅 목록
+                </button>
+                <button
+                  className="inline-flex items-center gap-1.5 text-sm text-foreground hover:text-amber px-3 py-1.5 rounded-lg border border-border bg-card hover:border-amber transition-colors"
+                  onClick={logout}
+                >
+                  <LogOut className="w-4 h-4" /> 로그아웃
+                </button>
+                <button
+                  className="inline-flex items-center gap-1.5 text-sm text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-lg border border-destructive transition-colors"
+                  onClick={withdraw}
+                >
+                  <Trash2 className="w-4 h-4" /> 회원 탈퇴
+                </button>
+              </div>
+            </div>
+
+            <button
+              className="inline-flex items-center gap-2 bg-amber text-white hover:bg-amber-dark shadow-warm px-4 py-2.5 rounded-xl font-medium transition-colors self-start md:self-auto"
+              onClick={() => router.push("/register")}
+            >
+              <PlusCircle className="w-4 h-4" />
+              새 물품 등록
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="my-layout">
-        {/* ============ Sidebar ============ */}
-        <aside className="my-sidebar">
-          <div className="my-profile">
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <Avatar name={p.nickName} size={44} />
-              <div style={{ minWidth: 0 }}>
-                <div className="my-profile-name">{p.nickName}</div>
-                <div className="my-profile-mail">{p.email}</div>
-              </div>
-            </div>
-            <div className="my-stats">
-              <div className="my-stat"><b>{total}</b><span>등록</span></div>
-              <div className="my-stat"><b>{activeCount}</b><span>진행중</span></div>
-              <div className="my-stat"><b>{completedCount}</b><span>완료</span></div>
-            </div>
-          </div>
-
-          <nav className="my-menu">
-            <button className={`my-menu-item ${activeTab === "foods" ? "on" : ""}`} onClick={() => setActiveTab("foods")}><Icon.Users /> 내가 등록한 물품</button>
-            <button className={`my-menu-item ${activeTab === "requests" ? "on" : ""}`} onClick={() => setActiveTab("requests")}><Icon.ArrowRight /> 보낸 요청</button>
-            <button className="my-menu-item" onClick={() => router.push("/chat")}><Icon.Chat /> 채팅 목록</button>
-            <button className="my-menu-item" onClick={() => setEditOpen(true)}><Icon.Pencil /> 정보 수정</button>
-            <div className="my-menu-sep"></div>
-            <button className="my-menu-item" onClick={logout}><Icon.ArrowRight /> 로그아웃</button>
-            <button className="my-menu-item danger" onClick={withdraw}><Icon.Trash /> 회원 탈퇴</button>
-          </nav>
-        </aside>
-
-        {/* ============ Main ============ */}
-        <div>
-          {activeTab === "foods" ? (
-            <>
-              <div className="my-main-head">
-                <div className="my-main-title">내가 등록한 물품</div>
-                <div className="my-main-count">총 {total}건 · 진행중 {activeCount}건</div>
-              </div>
-
-              <div className="tab-row" style={{ marginBottom: 16 }}>
-                {MY_FILTERS.map((f) => (
-                  <button key={f.id} className={`tab ${filter === f.id ? "on" : ""}`} onClick={() => setFilter(f.id)}>
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="my-list">
-                {filtered.map((f) => (
-                  <div className="my-row" key={f.foodId}>
-                    <Photo label="나눔마켓" src={f.thumbnailUrl || undefined} ratio="1/1" />
-                    <div className="my-row-body">
-                      <div className="my-row-name">{f.foodName}</div>
-                      <div className="my-row-exp">소비기한 {f.expired}</div>
-                      <div className="my-row-tags">
-                        <StatusBadge status={f.statusTx} />
-                        <span className="badge incomplete" style={{ background: "var(--bg-2)" }}>
-                          {f.approvedCount}/{f.capacity}명
-                        </span>
-                      </div>
-                    </div>
-                    <div className="my-row-actions">
-                      <button className="btn ghost sm" onClick={() => router.push(`/foods/${f.foodId}`)}>보기</button>
-                      {f.statusTx === "IN_PROGRESS" && (
-                        <button className="btn ghost sm" onClick={() => setEditFoodTarget(f)}>수정</button>
-                      )}
-                      {(f.statusTx === "IN_PROGRESS" || f.statusTx === "EXPIRED") && (
-                        <button className="btn danger-ghost sm" onClick={() => removeFood(f.foodId)}>삭제</button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {filtered.length === 0 && (
-                  <div style={{ padding: "60px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
-                    {total === 0 ? (
-                      <>
-                        아직 등록한 물품이 없어요
-                        <div style={{ marginTop: 14 }}>
-                          <button className="btn primary sm" onClick={() => router.push("/register")}>나눔 등록하기</button>
-                        </div>
-                      </>
-                    ) : "해당하는 물품이 없어요"}
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <MySentRequests />
-          )}
+      {/* ============ Tabs + content ============ */}
+      <div className="container py-8">
+        {/* Tab switcher */}
+        <div className="inline-flex bg-muted rounded-xl p-1 mb-8">
+          <button
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === "foods" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setActiveTab("foods")}
+          >
+            <Package className="w-4 h-4" />
+            내 등록 물품
+          </button>
+          <button
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === "requests" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setActiveTab("requests")}
+          >
+            <FileText className="w-4 h-4" />
+            보낸 요청
+          </button>
         </div>
+
+        {activeTab === "foods" ? (
+          <>
+            <div className="flex items-end justify-between gap-4 mb-4">
+              <h2 className="text-2xl font-bold text-foreground">내가 등록한 물품</h2>
+              <div className="text-sm text-muted-foreground">총 {total}건 · 진행중 {activeCount}건</div>
+            </div>
+
+            {/* Status filter chips */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {MY_FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    filter === f.id
+                      ? "bg-amber text-white"
+                      : "bg-card border border-border text-foreground hover:border-amber"
+                  }`}
+                  onClick={() => setFilter(f.id)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Foods list */}
+            <div className="space-y-4">
+              {filtered.map((f) => (
+                <div
+                  className="bg-card rounded-2xl border border-border p-4 flex items-center gap-4 hover:border-amber transition-colors"
+                  key={f.foodId}
+                >
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                    <Photo label="나눔마켓" src={f.thumbnailUrl || undefined} ratio="1/1" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-foreground truncate">{f.foodName}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">소비기한 {f.expired}</div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <StatusBadge status={f.statusTx} />
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                        {f.approvedCount}/{f.capacity}명
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+                    <button
+                      className="px-3 py-1.5 rounded-lg text-sm font-medium border border-border bg-card text-foreground hover:border-amber transition-colors"
+                      onClick={() => router.push(`/foods/${f.foodId}`)}
+                    >
+                      보기
+                    </button>
+                    {f.statusTx === "IN_PROGRESS" && (
+                      <button
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-border bg-card text-foreground hover:border-amber transition-colors"
+                        onClick={() => setEditFoodTarget(f)}
+                      >
+                        <Edit2 className="w-3.5 h-3.5" /> 수정
+                      </button>
+                    )}
+                    {(f.statusTx === "IN_PROGRESS" || f.statusTx === "EXPIRED") && (
+                      <button
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-destructive text-destructive hover:bg-destructive/10 transition-colors"
+                        onClick={() => removeFood(f.foodId)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> 삭제
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {filtered.length === 0 && (
+                <div className="text-center py-16">
+                  {total === 0 ? (
+                    <>
+                      <Package className="w-14 h-14 text-muted-foreground mx-auto mb-4 opacity-50" />
+                      <p className="text-muted-foreground mb-5">아직 등록한 물품이 없어요</p>
+                      <button
+                        className="bg-amber text-white hover:bg-amber-dark px-4 py-2 rounded-xl font-medium transition-colors"
+                        onClick={() => router.push("/register")}
+                      >
+                        나눔 등록하기
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">해당하는 물품이 없어요</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <MySentRequests />
+        )}
       </div>
 
       {editOpen && (
@@ -251,9 +365,9 @@ function MySentRequests() {
 
   return (
     <>
-      <div className="my-main-head">
-        <div className="my-main-title">보낸 요청</div>
-        {list && <div className="my-main-count">총 {list.length}건</div>}
+      <div className="flex items-end justify-between gap-4 mb-6">
+        <h2 className="text-2xl font-bold text-foreground">보낸 요청</h2>
+        {list && <div className="text-sm text-muted-foreground">총 {list.length}건</div>}
       </div>
 
       {list === null ? (
@@ -261,28 +375,55 @@ function MySentRequests() {
       ) : err ? (
         <StateBox kind="error" title="요청 목록을 불러오지 못했어요" onRetry={load} />
       ) : list.length === 0 ? (
-        <div style={{ padding: "60px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
-          보낸 요청이 없어요
+        <div className="text-center py-16">
+          <FileText className="w-14 h-14 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <p className="text-muted-foreground">보낸 요청이 없어요</p>
         </div>
       ) : (
-        <div className="my-list">
+        <div className="space-y-4">
           {list.map((r) => (
-            <div className="my-row" key={r.requestId}>
-              <Photo label="나눔마켓" src={r.thumbnailUrl || undefined} ratio="1/1" />
-              <div className="my-row-body">
-                <div className="my-row-name">{r.foodName || "물품"}</div>
-                {r.ownerNickName && <div className="my-row-exp">등록자 {r.ownerNickName}</div>}
-                <div className="my-row-tags">
-                  <span className={`badge ${r.status === "APPROVED" ? "progress" : r.status === "REQUEST" ? "incomplete" : "incomplete"}`}
-                    style={r.status === "REQUEST" ? { background: "var(--primary-100)", color: "var(--primary-700)" } : {}}>
+            <div
+              className="bg-card rounded-2xl border border-border p-4 flex items-center gap-4 hover:border-amber transition-colors"
+              key={r.requestId}
+            >
+              <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                <Photo label="나눔마켓" src={r.thumbnailUrl || undefined} ratio="1/1" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-foreground truncate">{r.foodName || "물품"}</div>
+                {r.ownerNickName && (
+                  <div className="text-sm text-muted-foreground mt-0.5">등록자 {r.ownerNickName}</div>
+                )}
+                <div className="mt-2">
+                  <span
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
+                      r.status === "APPROVED"
+                        ? "bg-green-100 text-green-700"
+                        : r.status === "REQUEST"
+                        ? "bg-amber/10 text-amber-dark"
+                        : r.status === "REJECTED"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
                     {REQUEST_STATUS_LABEL[r.status] || r.status}
                   </span>
                 </div>
               </div>
-              <div className="my-row-actions">
-                <button className="btn ghost sm" onClick={() => router.push(`/foods/${r.foodId}`)}>보기</button>
+              <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+                <button
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium border border-border bg-card text-foreground hover:border-amber transition-colors"
+                  onClick={() => router.push(`/foods/${r.foodId}`)}
+                >
+                  보기
+                </button>
                 {r.status === "REQUEST" && (
-                  <button className="btn danger-ghost sm" onClick={() => cancel(r.foodId, r.requestId)}>취소</button>
+                  <button
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium border border-destructive text-destructive hover:bg-destructive/10 transition-colors"
+                    onClick={() => cancel(r.foodId, r.requestId)}
+                  >
+                    취소
+                  </button>
                 )}
               </div>
             </div>
@@ -327,49 +468,83 @@ function EditFoodModal({ food, onClose, onSaved }) {
   };
 
   return (
-    <div className="modal-scrim" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="닫기"><Icon.X /></button>
-        <div className="eyebrow" style={{ color: "var(--primary)" }}>EDIT FOOD</div>
-        <h2 style={{ fontSize: 21, fontWeight: 800, marginTop: 4, marginBottom: 16 }}>물품 수정</h2>
+    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4" onClick={onClose}>
+      <div
+        className="bg-card rounded-2xl p-6 w-full max-w-md shadow-warm-lg relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          className="absolute top-4 right-4 w-8 h-8 rounded-lg grid place-items-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          onClick={onClose}
+          aria-label="닫기"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        <h2 className="text-xl font-bold text-foreground mb-5">물품 수정</h2>
 
-        <div className="label">물품 이름</div>
-        <input className="field-input" value={foodName} onChange={(e) => setFoodName(e.target.value)} maxLength={30} />
+        <label className="block text-sm font-medium text-foreground mb-1.5">물품 이름</label>
+        <input
+          className="w-full h-11 px-3 rounded-xl border border-border bg-card focus:border-amber focus:outline-none"
+          value={foodName}
+          onChange={(e) => setFoodName(e.target.value)}
+          maxLength={30}
+        />
 
-        <div className="label" style={{ marginTop: 16, display: "flex", justifyContent: "space-between" }}>
-          <span>정원 수</span><span className="hint">최대 10명</span>
+        <div className="flex justify-between items-center mt-4 mb-1.5">
+          <label className="text-sm font-medium text-foreground">정원 수</label>
+          <span className="text-xs text-muted-foreground">최대 10명</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 0" }}>
-          <button className="cap-btn" onClick={() => setCapacity((c) => Math.max(1, c - 1))} aria-label="감소"><Icon.Minus /></button>
-          <span style={{ minWidth: 60, textAlign: "center", fontSize: 20, fontWeight: 700, fontFamily: "var(--font-en)" }}>{capacity}명</span>
-          <button className="cap-btn" onClick={() => setCapacity((c) => Math.min(10, c + 1))} aria-label="증가"><Icon.Plus /></button>
+        <div className="flex items-center gap-3 py-1">
+          <button
+            className="w-9 h-9 rounded-lg border border-border bg-card text-foreground grid place-items-center hover:border-amber hover:text-amber transition-colors"
+            onClick={() => setCapacity((c) => Math.max(1, c - 1))}
+            aria-label="감소"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="min-w-[60px] text-center text-xl font-bold text-foreground">{capacity}명</span>
+          <button
+            className="w-9 h-9 rounded-lg border border-border bg-card text-foreground grid place-items-center hover:border-amber hover:text-amber transition-colors"
+            onClick={() => setCapacity((c) => Math.min(10, c + 1))}
+            aria-label="증가"
+          >
+            <PlusCircle className="w-4 h-4" />
+          </button>
         </div>
 
-        <div className="label" style={{ marginTop: 16 }}>상세 내용</div>
+        <label className="block text-sm font-medium text-foreground mt-4 mb-1.5">상세 내용</label>
         {!detailsLoaded ? (
-          <div style={{ padding: "20px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 12 }}>불러오는 중…</div>
+          <div className="py-5 text-center text-muted-foreground text-xs">불러오는 중…</div>
         ) : (
-          <textarea className="field-input textarea" value={details} onChange={(e) => setDetails(e.target.value)} maxLength={500} rows={4} />
+          <textarea
+            className="w-full px-3 py-2.5 rounded-xl border border-border bg-card focus:border-amber focus:outline-none resize-none"
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            maxLength={500}
+            rows={4}
+          />
         )}
 
         {error && (
-          <div style={{ marginTop: 14, padding: "10px 12px", background: "#FBEAE5", border: "1px solid var(--danger-100)", borderRadius: 8, color: "var(--danger)", fontSize: 12.5 }}>{error}</div>
+          <div className="mt-4 px-3 py-2.5 rounded-lg bg-red-50 text-destructive text-sm">{error}</div>
         )}
 
-        <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-          <button className="btn ghost" style={{ flex: 1 }} onClick={onClose}>취소</button>
-          <button className="btn primary" style={{ flex: 2 }} onClick={save} disabled={busy || !foodName.trim()}>{busy ? "저장 중…" : "저장하기"}</button>
+        <div className="flex gap-2 mt-5">
+          <button
+            className="flex-1 h-11 rounded-xl border border-border bg-card text-foreground font-medium hover:border-amber transition-colors"
+            onClick={onClose}
+          >
+            취소
+          </button>
+          <button
+            className="flex-[2] inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-amber text-white font-medium hover:bg-amber-dark transition-colors disabled:opacity-50"
+            onClick={save}
+            disabled={busy || !foodName.trim()}
+          >
+            {busy ? "저장 중…" : (<><Check className="w-4 h-4" /> 저장하기</>)}
+          </button>
         </div>
       </div>
-
-      <style>{`
-        .modal-scrim { position: fixed; inset: 0; background: rgba(31,29,24,0.45); backdrop-filter: blur(2px); z-index: 200; display: grid; place-items: center; padding: 20px; }
-        .modal { width: 100%; max-width: 440px; background: var(--surface); border-radius: 14px; padding: 28px; position: relative; box-shadow: var(--shadow-pop); }
-        .modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-3); }
-        .modal-close:hover { background: var(--bg-2); color: var(--ink); }
-        .cap-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); display: grid; place-items: center; }
-        .cap-btn:hover { border-color: var(--primary); color: var(--primary); }
-      `}</style>
     </div>
   );
 }
@@ -401,29 +576,71 @@ function EditProfileModal({ profile, onClose, onSaved }) {
   };
 
   return (
-    <div className="modal-scrim" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="닫기"><Icon.X /></button>
-        <div className="eyebrow" style={{ color: "var(--primary)" }}>EDIT PROFILE</div>
-        <h2 style={{ fontSize: 21, fontWeight: 800, marginTop: 4, marginBottom: 16 }}>정보 수정</h2>
+    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4" onClick={onClose}>
+      <div
+        className="bg-card rounded-2xl p-6 w-full max-w-md shadow-warm-lg relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          className="absolute top-4 right-4 w-8 h-8 rounded-lg grid place-items-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          onClick={onClose}
+          aria-label="닫기"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        <h2 className="text-xl font-bold text-foreground mb-5">정보 수정</h2>
 
-        <div className="label">닉네임 <span className="hint">2–10자</span></div>
-        <input className="field-input" value={nick} onChange={(e) => setNick(e.target.value)} maxLength={10} />
+        <label className="block text-sm font-medium text-foreground mb-1.5">
+          닉네임 <span className="text-xs text-muted-foreground font-normal">2–10자</span>
+        </label>
+        <input
+          className="w-full h-11 px-3 rounded-xl border border-border bg-card focus:border-amber focus:outline-none"
+          value={nick}
+          onChange={(e) => setNick(e.target.value)}
+          maxLength={10}
+        />
 
-        <div className="label" style={{ marginTop: 16 }}>주소</div>
-        <div className="verify-row">
-          <input className="field-input" value={road} readOnly onClick={() => setAddrOpen(true)} placeholder="도로명 주소 검색" style={{ cursor: "pointer" }} />
-          <button className="btn ghost" onClick={() => setAddrOpen(true)}>주소 검색</button>
+        <label className="block text-sm font-medium text-foreground mt-4 mb-1.5">주소</label>
+        <div className="flex gap-2">
+          <input
+            className="flex-1 h-11 px-3 rounded-xl border border-border bg-card focus:border-amber focus:outline-none cursor-pointer"
+            value={road}
+            readOnly
+            onClick={() => setAddrOpen(true)}
+            placeholder="도로명 주소 검색"
+          />
+          <button
+            className="px-4 h-11 rounded-xl border border-border bg-card text-foreground font-medium hover:border-amber transition-colors flex-shrink-0"
+            onClick={() => setAddrOpen(true)}
+          >
+            주소 검색
+          </button>
         </div>
-        <input className="field-input" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="상세주소 (선택)" style={{ marginTop: 8 }} />
+        <input
+          className="w-full h-11 px-3 mt-2 rounded-xl border border-border bg-card focus:border-amber focus:outline-none"
+          value={detail}
+          onChange={(e) => setDetail(e.target.value)}
+          placeholder="상세주소 (선택)"
+        />
 
         {error && (
-          <div style={{ marginTop: 14, padding: "10px 12px", background: "#FBEAE5", border: "1px solid var(--danger-100)", borderRadius: 8, color: "var(--danger)", fontSize: 12.5 }}>{error}</div>
+          <div className="mt-4 px-3 py-2.5 rounded-lg bg-red-50 text-destructive text-sm">{error}</div>
         )}
 
-        <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-          <button className="btn ghost" style={{ flex: 1 }} onClick={onClose}>취소</button>
-          <button className="btn primary" style={{ flex: 2 }} onClick={save} disabled={busy}>{busy ? "저장 중…" : "저장하기"}</button>
+        <div className="flex gap-2 mt-5">
+          <button
+            className="flex-1 h-11 rounded-xl border border-border bg-card text-foreground font-medium hover:border-amber transition-colors"
+            onClick={onClose}
+          >
+            취소
+          </button>
+          <button
+            className="flex-[2] inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-amber text-white font-medium hover:bg-amber-dark transition-colors disabled:opacity-50"
+            onClick={save}
+            disabled={busy}
+          >
+            {busy ? "저장 중…" : (<><Check className="w-4 h-4" /> 저장하기</>)}
+          </button>
         </div>
       </div>
 
@@ -431,13 +648,6 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         const building = data.buildingName && data.buildingName !== "N" ? ` (${data.buildingName})` : "";
         setRoad((data.roadAddress || data.jibunAddress || "") + building);
       }} />
-
-      <style>{`
-        .modal-scrim { position: fixed; inset: 0; background: rgba(31,29,24,0.45); backdrop-filter: blur(2px); z-index: 200; display: grid; place-items: center; padding: 20px; }
-        .modal { width: 100%; max-width: 440px; background: var(--surface); border-radius: 14px; padding: 28px; position: relative; box-shadow: var(--shadow-pop); }
-        .modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-3); }
-        .modal-close:hover { background: var(--bg-2); color: var(--ink); }
-      `}</style>
     </div>
   );
 }
