@@ -1,6 +1,9 @@
 "use client";
 
-/* ChatScreens.jsx — 채팅 목록(D-channel) + 실시간 채팅방
+/* ChatScreens.jsx — 채팅 목록 + 실시간 채팅방
+   ※ UI는 업로드된 zip 디자인(Chat.tsx, Warm Organic Modernism)을 그대로 사용한다.
+     백엔드 채팅 기능은 전부 실제 API/소켓에 연결되어 있다.
+
    목록:   GET /members/me/chat/rooms
    방 입장: GET /chat/rooms/{roomId}/messages (양방향 커서, 명세 6-3)
      - direction=initial: 마지막 읽은 메시지 기준 위·아래를 함께 로드 → 맨 밑이 아니라
@@ -9,24 +12,68 @@
    실시간:  STOMP /ws  · SEND /pub/chat/rooms/{roomId} · SUBSCRIBE /user/queue/messages
    (발신자는 자신의 메시지를 소켓으로 다시 받지 않으므로 낙관적으로 화면에 추가) */
 
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Icon from "@/components/icons";
-import { Avatar, StateBox, Spinner } from "@/components/ui";
+import { StateBox, Spinner } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { createChatSocket } from "@/lib/chatSocket";
 import API from "@/lib/api";
 
-function timeLabel(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
+/* zip(utils.ts)의 formatChatTime — 오늘은 시각, 어제/N일 전, 그 이전은 월·일 */
+function formatChatTime(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
   const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  if (sameDay) return `${d.getHours() < 12 ? "오전" : "오후"} ${((d.getHours() + 11) % 12) + 1}:${mm}`;
-  return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) {
+    return date.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+  } else if (diffDays === 1) {
+    return "어제";
+  } else if (diffDays < 7) {
+    return `${diffDays}일 전`;
+  }
+  return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
+}
+
+/* zip 디자인의 아바타(AvatarFallback) — amber 원형 + 이니셜.
+   메시지의 상대방 아바타는 secondary 톤을 사용한다. */
+function ChatAvatar({ name = "?", size = 44, variant = "amber" }) {
+  const initial = (name || "?").trim().charAt(0).toUpperCase();
+  const tone =
+    variant === "secondary" ? "bg-secondary text-secondary-foreground" : "bg-amber text-white";
+  return (
+    <div
+      className={`rounded-full grid place-items-center font-bold flex-shrink-0 ${tone}`}
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}
+    >
+      {initial}
+    </div>
+  );
+}
+
+/* zip 디자인에서 쓰는 Package 아이콘(repo 아이콘셋에 없어 로컬 정의) */
+function PackageIcon(p) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...p}
+    >
+      <path d="M16.5 9.4 7.55 4.24" />
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <path d="M3.27 6.96 12 12.01l8.73-5.05" />
+      <path d="M12 22.08V12" />
+    </svg>
+  );
 }
 
 /* ============ 채팅 목록 ============ */
@@ -53,53 +100,64 @@ export function ChatListScreen() {
     return () => { alive = false; };
   }, [authLoading, user, router]);
 
-  if (authLoading || rooms === null) {
-    return (
-      <div className="w-full p-4 sm:p-5">
-        <StateBox kind="loading" title="채팅 목록을 불러오는 중…" />
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full p-4 sm:p-5">
-      <div className="mb-4 px-0.5">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">채팅</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {rooms.length > 0 ? `${rooms.length}개의 대화` : "대화 목록"}
+    <div className="flex flex-col min-h-full bg-card">
+      {/* 헤더 */}
+      <div className="p-5 border-b border-border sticky top-0 bg-card z-10">
+        <h2 className="text-xl font-extrabold text-foreground">채팅</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {rooms && rooms.length > 0 ? `${rooms.length}개의 대화` : "대화 목록"}
         </p>
       </div>
 
-      {error ? (
-        <StateBox kind="error" title="채팅을 불러오지 못했어요" sub={`(${error.code || error.status || "네트워크 오류"})`} />
+      {authLoading || rooms === null ? (
+        <StateBox kind="loading" title="채팅 목록을 불러오는 중…" />
+      ) : error ? (
+        <StateBox
+          kind="error"
+          title="채팅을 불러오지 못했어요"
+          sub={`(${error.code || error.status || "네트워크 오류"})`}
+        />
       ) : rooms.length === 0 ? (
-        <StateBox kind="empty" title="아직 채팅이 없어요" sub="물품 상세에서 ‘채팅하기’로 등록자와 대화를 시작해보세요." />
+        <StateBox
+          kind="empty"
+          title="아직 채팅이 없어요"
+          sub="물품 상세에서 ‘채팅하기’로 등록자와 대화를 시작해보세요."
+        />
       ) : (
-        <div className="flex flex-col gap-1">
-          {rooms.map((r) => {
-            const active = r.roomId === activeRoomId;
+        <div className="flex-1 overflow-y-auto">
+          {rooms.map((room) => {
+            const active = room.roomId === activeRoomId;
             return (
               <button
-                key={r.roomId}
-                onClick={() => router.push(`/chat/${r.roomId}`)}
-                className={`flex items-center gap-3.5 w-full text-left p-3 rounded-xl transition-colors ${
-                  active ? "bg-amber/10" : "hover:bg-muted"
+                key={room.roomId}
+                onClick={() => router.push(`/chat/${room.roomId}`)}
+                className={`w-full p-4 flex items-start gap-3 hover:bg-accent transition-colors text-left border-b border-border/50 ${
+                  active ? "bg-amber/5 border-l-2 border-l-amber" : ""
                 }`}
               >
-                <Avatar name={r.partnerNickName || "?"} size={48} />
+                <ChatAvatar name={room.partnerNickName} size={44} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-bold text-sm text-foreground truncate">{r.partnerNickName || "상대"}</span>
-                    <span className="ml-auto text-[11px] text-muted-foreground whitespace-nowrap flex-shrink-0">{timeLabel(r.lastMessageAt)}</span>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="font-semibold text-foreground text-sm truncate">
+                      {room.partnerNickName || "상대"}
+                    </span>
+                    <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+                      {formatChatTime(room.lastMessageAt)}
+                    </span>
                   </div>
-                  <div className="text-xs font-semibold text-amber mt-0.5 truncate">{r.foodName}</div>
-                  <div className="text-sm text-muted-foreground truncate mt-0.5">{r.lastMessage || "대화를 시작해보세요"}</div>
+                  <p className="text-xs text-muted-foreground truncate mb-1">{room.foodName}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground truncate flex-1">
+                      {room.lastMessage || "대화를 시작해보세요"}
+                    </p>
+                    {room.unreadCount > 0 && (
+                      <span className="bg-amber text-white text-xs ml-2 flex-shrink-0 min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5 font-bold">
+                        {room.unreadCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {r.unreadCount > 0 && (
-                  <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-amber text-white text-[11px] font-bold grid place-items-center flex-shrink-0">
-                    {r.unreadCount}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -138,12 +196,12 @@ function readHistory(hist) {
 /* ============ 빈 화면(데스크톱: 방 미선택 시 우측 패널) ============ */
 export function ChatEmptyPane() {
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="w-20 h-20 rounded-2xl bg-amber/10 text-amber grid place-items-center">
-        <Icon.Chat width={32} height={32} />
+    <div className="flex-1 h-full w-full flex flex-col items-center justify-center text-center p-8">
+      <div className="w-20 h-20 rounded-3xl bg-amber/10 flex items-center justify-center mb-5">
+        <Icon.Chat width={40} height={40} className="text-amber" />
       </div>
-      <p className="text-lg font-bold text-foreground">채팅을 선택해주세요</p>
-      <p className="text-sm text-muted-foreground leading-relaxed">
+      <h3 className="text-xl font-bold text-foreground mb-2">채팅을 선택해주세요</h3>
+      <p className="text-muted-foreground text-sm max-w-xs">
         왼쪽 목록에서 대화를 선택하거나,
         <br />
         물품 상세 페이지에서 채팅을 시작하세요.
@@ -211,7 +269,7 @@ export function ChatRoomScreen({ roomId }) {
     else if (bottomRef.current) bottomRef.current.scrollIntoView({ block: "end" });
   }, [loading]);
 
-  // STOMP 연결
+  // STOMP 연결 (실시간 수신)
   useEffect(() => {
     if (authLoading || !user) return;
     const sock = createChatSocket({
@@ -302,45 +360,41 @@ export function ChatRoomScreen({ roomId }) {
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-card">
+      {/* 채팅방 헤더 (zip 디자인) */}
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-card">
         <button
-          className="grid md:hidden w-8 h-8 place-items-center rounded-lg hover:bg-muted"
+          className="md:hidden p-1.5 rounded-lg hover:bg-accent transition-colors"
           onClick={() => router.push("/chat")}
           aria-label="뒤로"
         >
-          <Icon.ChevronLeft />
+          <Icon.ChevronLeft width={20} height={20} />
         </button>
-        <Avatar name={(room && room.partnerNickName) || "?"} size={40} />
+        <ChatAvatar name={(room && room.partnerNickName) || "?"} size={36} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground truncate">{room ? (room.partnerNickName || "상대") : "채팅"}</span>
-            <span
-              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                status === "connected" ? "bg-primary" : status === "error" || status === "disconnected" ? "bg-destructive" : "bg-muted-foreground"
-              }`}
-              title={status === "connected" ? "실시간 연결됨" : status === "connecting" ? "연결 중" : "연결 끊김"}
-            />
-          </div>
+          <p className="font-semibold text-foreground text-sm truncate">
+            {room ? room.partnerNickName || "상대" : "채팅"}
+          </p>
           {room && room.foodName && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground truncate mt-0.5">
-              <Icon.Pin width={12} height={12} className="flex-shrink-0" />
-              <span className="truncate">{room.foodName}</span>
+            <div className="flex items-center gap-1.5">
+              <PackageIcon width={12} height={12} className="text-muted-foreground flex-shrink-0" />
+              <p className="text-xs text-muted-foreground truncate">{room.foodName}</p>
             </div>
           )}
         </div>
         {room && (
           <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-background text-xs font-semibold text-foreground hover:bg-muted transition-colors flex-shrink-0"
+            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-border bg-background text-foreground hover:bg-muted transition-colors flex-shrink-0"
             onClick={() => router.push(`/foods/${room.foodId}`)}
           >
-            <Icon.Heart width={14} height={14} />
+            <PackageIcon width={14} height={14} />
             물품 보기
           </button>
         )}
       </div>
 
+      {/* 메시지 영역 (zip 디자인: bg-cream) */}
       <div
-        className="flex-1 overflow-y-auto p-4 bg-background flex flex-col gap-2.5"
+        className="flex-1 overflow-y-auto p-5 space-y-4 bg-cream/50"
         ref={scrollRef}
         onScroll={(e) => {
           const el = e.currentTarget;
@@ -362,29 +416,47 @@ export function ChatRoomScreen({ roomId }) {
                 첫 메시지를 보내 대화를 시작해보세요 👋
               </div>
             )}
-            {messages.map((m, i) => (
-              <Fragment key={m.messageId ?? i}>
+            {messages.map((msg, i) => (
+              <Fragment key={msg.messageId ?? i}>
                 {i === firstUnreadIdx && (
-                  <div data-new-divider className="flex items-center text-center gap-2.5 my-1 text-destructive text-[11px] font-bold">
-                    <span className="flex-1 h-px bg-destructive/35" />
+                  <div
+                    data-new-divider
+                    className="flex items-center text-center gap-2.5 text-amber text-[11px] font-bold"
+                  >
+                    <span className="flex-1 h-px bg-amber/35" />
                     <span className="whitespace-nowrap">여기까지 읽음 · 새 메시지</span>
-                    <span className="flex-1 h-px bg-destructive/35" />
+                    <span className="flex-1 h-px bg-amber/35" />
                   </div>
                 )}
-                <div className={`flex gap-2 items-end max-w-[78%] ${m.mine ? "self-end flex-row-reverse" : ""}`}>
-                  {!m.mine && <Avatar name={m.senderNickName || "?"} size={30} />}
-                  <div className="min-w-0">
-                    {!m.mine && <div className="text-[11px] text-amber font-semibold mb-1 ml-0.5">{m.senderNickName}</div>}
+                <div
+                  className={`flex items-end gap-2 animate-fade-in ${
+                    msg.mine ? "flex-row-reverse" : "flex-row"
+                  }`}
+                >
+                  {!msg.mine && (
+                    <ChatAvatar name={msg.senderNickName} size={32} variant="secondary" />
+                  )}
+                  <div
+                    className={`max-w-[70%] flex flex-col gap-1 ${
+                      msg.mine ? "items-end" : "items-start"
+                    }`}
+                  >
+                    {!msg.mine && (
+                      <span className="text-xs text-muted-foreground px-1">{msg.senderNickName}</span>
+                    )}
                     <div
-                      className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                        m.mine
-                          ? "bg-amber text-white border border-amber"
-                          : "bg-card border border-border text-foreground"
+                      className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                        msg.mine
+                          ? "bg-amber text-white rounded-br-sm"
+                          : "bg-card text-foreground rounded-bl-sm border border-border"
                       }`}
+                      style={msg.mine ? { boxShadow: "0 2px 8px oklch(0.70 0.16 55 / 0.25)" } : {}}
                     >
-                      {m.content}
+                      {msg.content}
                     </div>
-                    <div className={`text-[10px] text-muted-foreground mt-1 ${m.mine ? "text-right" : ""}`}>{timeLabel(m.createdAt)}</div>
+                    <span className="text-xs text-muted-foreground px-1">
+                      {formatChatTime(msg.createdAt)}
+                    </span>
                   </div>
                 </div>
               </Fragment>
@@ -394,23 +466,26 @@ export function ChatRoomScreen({ roomId }) {
         )}
       </div>
 
-      <div className="flex gap-2 px-4 py-3 border-t border-border bg-card">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) send(); }}
-          placeholder={status === "connected" ? "메시지를 입력하세요" : "연결 중…"}
-          disabled={loading}
-          className="flex-1 h-11 rounded-full border border-border bg-background px-5 text-sm focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber"
-        />
-        <button
-          className="w-11 h-11 rounded-full bg-amber text-white grid place-items-center hover:bg-amber-dark disabled:opacity-50"
-          onClick={send}
-          disabled={!input.trim() || status !== "connected"}
-          aria-label="보내기"
-        >
-          <Icon.Send />
-        </button>
+      {/* 입력 영역 (zip 디자인) */}
+      <div className="p-4 border-t border-border bg-card">
+        <div className="flex gap-2 items-end">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) send(); }}
+            placeholder="메시지를 입력하세요..."
+            disabled={loading}
+            className="flex-1 h-10 rounded-xl bg-cream border border-border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber disabled:opacity-60"
+          />
+          <button
+            onClick={send}
+            disabled={!input.trim() || status !== "connected"}
+            className="bg-amber text-white hover:bg-amber-dark shadow-warm w-10 h-10 p-0 rounded-xl grid place-items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            aria-label="보내기"
+          >
+            <Icon.Send width={16} height={16} />
+          </button>
+        </div>
       </div>
     </div>
   );
