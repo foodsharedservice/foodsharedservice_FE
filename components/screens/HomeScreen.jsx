@@ -29,6 +29,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [heroFoods, setHeroFoods] = useState(null); // 히어로 대표사진(최근 등록 2개) — null=로딩전/실패
   const sentinelRef = useRef(null);
 
   // 정렬은 서버 sort 파라미터로 처리 (허용 필드: foodId, expired, capacity)
@@ -63,6 +64,20 @@ export default function HomeScreen() {
   }, [fetchPage, sortParam]);
 
   useEffect(() => load(), [load]);
+
+  // 히어로 placeholder 카드 → 최근 등록 음식 2개의 대표사진으로 교체.
+  // 로딩 전·실패 시에는 heroFoods를 채우지 않아 기존 placeholder가 유지된다.
+  useEffect(() => {
+    let alive = true;
+    API.foods.recent({ size: 2 })
+      .then((data) => {
+        if (!alive) return;
+        const list = Array.isArray(data) ? data : (data && Array.isArray(data.content) ? data.content : []);
+        if (list.length > 0) setHeroFoods(list.slice(0, 2));
+      })
+      .catch(() => {}); // 실패 시 placeholder 유지
+    return () => { alive = false; };
+  }, []);
 
   const loadMore = () => {
     if (loadingMore) return;
@@ -114,20 +129,8 @@ export default function HomeScreen() {
             </div>
           </div>
           <div className="home-hero-art" aria-hidden="true">
-            <div className="art-card art-1">
-              <Photo label="냠냠" />
-              <div className="art-card-meta">
-                <StatusBadge status="IN_PROGRESS" />
-                <span className="eyebrow" style={{ fontSize: 9.5 }}>D-12</span>
-              </div>
-            </div>
-            <div className="art-card art-2">
-              <Photo label="냠냠" />
-              <div className="art-card-meta">
-                <StatusBadge status="COMPLETED" />
-                <span className="eyebrow" style={{ fontSize: 9.5 }}>2/2</span>
-              </div>
-            </div>
+            <HeroCard className="art-1" food={heroFoods?.[0]} fallback={{ status: "IN_PROGRESS", label: "D-12" }} />
+            <HeroCard className="art-2" food={heroFoods?.[1]} fallback={{ status: "COMPLETED", label: "2/2" }} />
             <div className="art-tag">미개봉 · 가공식품만</div>
           </div>
         </div>
@@ -214,6 +217,30 @@ export default function HomeScreen() {
           .feed-grid { grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
         }
       `}</style>
+    </div>
+  );
+}
+
+/* ============ Hero Card ============
+   히어로 대표사진 카드. food가 있으면 최근 등록 음식의 대표사진/상태/라벨을,
+   없으면(로딩 전·실패) fallback placeholder를 렌더링한다.
+   라벨: 완료(COMPLETED)면 n/N(승인/정원), 그 외에는 D-day. */
+function heroDLabel(food) {
+  if (food.statusTx === "COMPLETED") return `${food.approvedCount}/${food.capacity}`;
+  const d = Math.ceil((new Date(food.expired) - new Date()) / (1000 * 60 * 60 * 24));
+  return d < 0 ? `D+${Math.abs(d)}` : d === 0 ? "D-DAY" : `D-${d}`;
+}
+
+function HeroCard({ className, food, fallback }) {
+  const status = food ? food.statusTx : fallback.status;
+  const label = food ? heroDLabel(food) : fallback.label;
+  return (
+    <div className={`art-card ${className}`}>
+      <Photo label="냠냠" src={food?.thumbnailUrl} />
+      <div className="art-card-meta">
+        <StatusBadge status={status} />
+        <span className="eyebrow" style={{ fontSize: 9.5 }}>{label}</span>
+      </div>
     </div>
   );
 }
