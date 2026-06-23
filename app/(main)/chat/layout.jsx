@@ -12,23 +12,17 @@ export default function ChatLayout({ children }) {
   const inRoom = /^\/chat\/.+/.test(pathname || ""); // 방이 열려 있는지
 
   return (
-    <div className={`chat-shell ${inRoom ? "in-room" : ""}`}>
-      <aside className="chat-pane-list">
+    <div className="flex h-[calc(100vh-64px)] max-w-[1100px] w-full mx-auto">
+      <aside
+        className={`w-full md:w-[360px] md:flex-shrink-0 h-full overflow-y-auto md:border-r border-border ${
+          inRoom ? "hidden md:block" : "block"
+        }`}
+      >
         <ChatListScreen />
       </aside>
-      <section className="chat-pane-room">{children}</section>
-
-      <style>{`
-        .chat-shell { display: flex; height: calc(100vh - 64px); max-width: 1100px; width: 100%; margin: 0 auto; }
-        .chat-pane-list { width: 360px; flex-shrink: 0; height: 100%; overflow-y: auto; border-right: 1px solid var(--line); }
-        .chat-pane-room { flex: 1; min-width: 0; height: 100%; }
-        @media (max-width: 900px) {
-          .chat-shell { max-width: none; height: calc(100vh - 57px); }
-          .chat-pane-list { width: 100%; border-right: 0; }
-          .chat-shell.in-room .chat-pane-list { display: none; }
-          .chat-shell:not(.in-room) .chat-pane-room { display: none; }
-        }
-      `}</style>
+      <section className={`flex-1 min-w-0 h-full ${inRoom ? "block" : "hidden md:block"}`}>
+        {children}
+      </section>
     </div>
   );
 }
