@@ -6,9 +6,12 @@
    DELETE /members/me                  회원 탈퇴
    POST   /auth/logout                 로그아웃
    DELETE /foods/{foodId}              내 물품 삭제
-   GET    /members/me/foods            내가 등록한 물품 목록 */
+   PATCH  /foods/{foodId}              내 물품 수정
+   GET    /members/me/foods            내가 등록한 물품 목록
+   GET    /members/me/requests         내가 보낸 요청 목록
+   DELETE /foods/{foodId}/requests/{requestId}  요청 취소 */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
 import { Photo, StatusBadge, Avatar, StateBox } from "@/components/ui";
@@ -23,6 +26,13 @@ const MY_FILTERS = [
   { id: "DONE", label: "만료/미완료" },
 ];
 
+const REQUEST_STATUS_LABEL = {
+  REQUEST: "대기중",
+  APPROVED: "수락됨",
+  REJECTED: "거절됨",
+  CANCELLED: "취소됨",
+};
+
 export default function MyScreen() {
   const router = useRouter();
   const { user, loading: authLoading, setUser, refresh } = useAuth();
@@ -32,6 +42,8 @@ export default function MyScreen() {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("ALL");
   const [editOpen, setEditOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("foods"); // "foods" | "requests"
+  const [editFoodTarget, setEditFoodTarget] = useState(null); // food object to edit
 
   useEffect(() => {
     if (authLoading) return;
@@ -121,7 +133,8 @@ export default function MyScreen() {
           </div>
 
           <nav className="my-menu">
-            <button className="my-menu-item on"><Icon.Users /> 내가 등록한 물품</button>
+            <button className={`my-menu-item ${activeTab === "foods" ? "on" : ""}`} onClick={() => setActiveTab("foods")}><Icon.Users /> 내가 등록한 물품</button>
+            <button className={`my-menu-item ${activeTab === "requests" ? "on" : ""}`} onClick={() => setActiveTab("requests")}><Icon.ArrowRight /> 보낸 요청</button>
             <button className="my-menu-item" onClick={() => router.push("/chat")}><Icon.Chat /> 채팅 목록</button>
             <button className="my-menu-item" onClick={() => setEditOpen(true)}><Icon.Pencil /> 정보 수정</button>
             <div className="my-menu-sep"></div>
@@ -130,56 +143,65 @@ export default function MyScreen() {
           </nav>
         </aside>
 
-        {/* ============ Main: my foods ============ */}
+        {/* ============ Main ============ */}
         <div>
-          <div className="my-main-head">
-            <div className="my-main-title">내가 등록한 물품</div>
-            <div className="my-main-count">총 {total}건 · 진행중 {activeCount}건</div>
-          </div>
-
-          <div className="tab-row" style={{ marginBottom: 16 }}>
-            {MY_FILTERS.map((f) => (
-              <button key={f.id} className={`tab ${filter === f.id ? "on" : ""}`} onClick={() => setFilter(f.id)}>
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="my-list">
-            {filtered.map((f) => (
-              <div className="my-row" key={f.foodId}>
-                <Photo label="냠냠" src={f.thumbnailUrl || undefined} ratio="1/1" />
-                <div className="my-row-body">
-                  <div className="my-row-name">{f.foodName}</div>
-                  <div className="my-row-exp">소비기한 {f.expired}</div>
-                  <div className="my-row-tags">
-                    <StatusBadge status={f.statusTx} />
-                    <span className="badge incomplete" style={{ background: "var(--bg-2)" }}>
-                      {f.approvedCount}/{f.capacity}명
-                    </span>
-                  </div>
-                </div>
-                <div className="my-row-actions">
-                  <button className="btn ghost sm" onClick={() => router.push(`/foods/${f.foodId}`)}>보기</button>
-                  {(f.statusTx === "IN_PROGRESS" || f.statusTx === "EXPIRED") && (
-                    <button className="btn danger-ghost sm" onClick={() => removeFood(f.foodId)}>삭제</button>
-                  )}
-                </div>
+          {activeTab === "foods" ? (
+            <>
+              <div className="my-main-head">
+                <div className="my-main-title">내가 등록한 물품</div>
+                <div className="my-main-count">총 {total}건 · 진행중 {activeCount}건</div>
               </div>
-            ))}
-            {filtered.length === 0 && (
-              <div style={{ padding: "60px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
-                {total === 0 ? (
-                  <>
-                    아직 등록한 물품이 없어요
-                    <div style={{ marginTop: 14 }}>
-                      <button className="btn primary sm" onClick={() => router.push("/register")}>나눔 등록하기</button>
+
+              <div className="tab-row" style={{ marginBottom: 16 }}>
+                {MY_FILTERS.map((f) => (
+                  <button key={f.id} className={`tab ${filter === f.id ? "on" : ""}`} onClick={() => setFilter(f.id)}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="my-list">
+                {filtered.map((f) => (
+                  <div className="my-row" key={f.foodId}>
+                    <Photo label="냠냠" src={f.thumbnailUrl || undefined} ratio="1/1" />
+                    <div className="my-row-body">
+                      <div className="my-row-name">{f.foodName}</div>
+                      <div className="my-row-exp">소비기한 {f.expired}</div>
+                      <div className="my-row-tags">
+                        <StatusBadge status={f.statusTx} />
+                        <span className="badge incomplete" style={{ background: "var(--bg-2)" }}>
+                          {f.approvedCount}/{f.capacity}명
+                        </span>
+                      </div>
                     </div>
-                  </>
-                ) : "해당하는 물품이 없어요"}
+                    <div className="my-row-actions">
+                      <button className="btn ghost sm" onClick={() => router.push(`/foods/${f.foodId}`)}>보기</button>
+                      {f.statusTx === "IN_PROGRESS" && (
+                        <button className="btn ghost sm" onClick={() => setEditFoodTarget(f)}>수정</button>
+                      )}
+                      {(f.statusTx === "IN_PROGRESS" || f.statusTx === "EXPIRED") && (
+                        <button className="btn danger-ghost sm" onClick={() => removeFood(f.foodId)}>삭제</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {filtered.length === 0 && (
+                  <div style={{ padding: "60px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
+                    {total === 0 ? (
+                      <>
+                        아직 등록한 물품이 없어요
+                        <div style={{ marginTop: 14 }}>
+                          <button className="btn primary sm" onClick={() => router.push("/register")}>나눔 등록하기</button>
+                        </div>
+                      </>
+                    ) : "해당하는 물품이 없어요"}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <MySentRequests />
+          )}
         </div>
       </div>
 
@@ -190,6 +212,164 @@ export default function MyScreen() {
           onSaved={async () => { setEditOpen(false); const me = await API.members.me().catch(() => null); if (me) setProfile(me); refresh && refresh(); }}
         />
       )}
+
+      {editFoodTarget && (
+        <EditFoodModal
+          food={editFoodTarget}
+          onClose={() => setEditFoodTarget(null)}
+          onSaved={(updated) => {
+            setFoods((prev) => prev.map((f) => f.foodId === updated.foodId ? { ...f, ...updated } : f));
+            setEditFoodTarget(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ============ 보낸 요청 목록 ============ */
+function MySentRequests() {
+  const router = useRouter();
+  const [list, setList] = useState(null);
+  const [err, setErr] = useState(null);
+
+  const load = useCallback(() => {
+    setErr(null);
+    API.requests.mySent()
+      .then((res) => setList(Array.isArray(res) ? res : (res && res.content) || []))
+      .catch((e) => { setErr(e); setList([]); });
+  }, []);
+
+  useEffect(() => load(), [load]);
+
+  const cancel = (foodId, requestId) => {
+    if (!window.confirm("요청을 취소할까요?")) return;
+    API.requests.cancel(foodId, requestId)
+      .then(() => setList((prev) => prev.filter((r) => r.requestId !== requestId)))
+      .catch((e) => alert(e.message || "취소에 실패했어요."));
+  };
+
+  return (
+    <>
+      <div className="my-main-head">
+        <div className="my-main-title">보낸 요청</div>
+        {list && <div className="my-main-count">총 {list.length}건</div>}
+      </div>
+
+      {list === null ? (
+        <StateBox kind="loading" title="요청 목록을 불러오는 중…" />
+      ) : err ? (
+        <StateBox kind="error" title="요청 목록을 불러오지 못했어요" onRetry={load} />
+      ) : list.length === 0 ? (
+        <div style={{ padding: "60px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
+          보낸 요청이 없어요
+        </div>
+      ) : (
+        <div className="my-list">
+          {list.map((r) => (
+            <div className="my-row" key={r.requestId}>
+              <Photo label="냠냠" src={r.thumbnailUrl || undefined} ratio="1/1" />
+              <div className="my-row-body">
+                <div className="my-row-name">{r.foodName || "물품"}</div>
+                {r.ownerNickName && <div className="my-row-exp">등록자 {r.ownerNickName}</div>}
+                <div className="my-row-tags">
+                  <span className={`badge ${r.status === "APPROVED" ? "progress" : r.status === "REQUEST" ? "incomplete" : "incomplete"}`}
+                    style={r.status === "REQUEST" ? { background: "var(--primary-100)", color: "var(--primary-700)" } : {}}>
+                    {REQUEST_STATUS_LABEL[r.status] || r.status}
+                  </span>
+                </div>
+              </div>
+              <div className="my-row-actions">
+                <button className="btn ghost sm" onClick={() => router.push(`/foods/${r.foodId}`)}>보기</button>
+                {r.status === "REQUEST" && (
+                  <button className="btn danger-ghost sm" onClick={() => cancel(r.foodId, r.requestId)}>취소</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ============ 음식 수정 모달 (PATCH /foods/{foodId}) ============ */
+function EditFoodModal({ food, onClose, onSaved }) {
+  const [foodName, setFoodName] = useState(food.foodName || "");
+  const [capacity, setCapacity] = useState(food.capacity || 3);
+  const [details, setDetails] = useState("");
+  const [detailsLoaded, setDetailsLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    API.foods.detail(food.foodId)
+      .then((d) => { setDetails(d.details || ""); setDetailsLoaded(true); })
+      .catch(() => setDetailsLoaded(true));
+  }, [food.foodId]);
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const body = {};
+      if (foodName.trim() !== food.foodName) body.foodName = foodName.trim();
+      if (capacity !== food.capacity) body.capacity = capacity;
+      if (detailsLoaded) body.details = details.trim();
+      const updated = await API.foods.update(food.foodId, body);
+      onSaved && onSaved({ ...food, foodName: foodName.trim(), capacity, ...(updated || {}) });
+    } catch (e) {
+      const map = { VALIDATION_FAILED: "입력값을 확인해주세요.", FOOD_NOT_FOUND: "존재하지 않는 물품이에요." };
+      setError(map[e.code] || e.message || "수정에 실패했어요.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose} aria-label="닫기"><Icon.X /></button>
+        <div className="eyebrow" style={{ color: "var(--primary)" }}>EDIT FOOD</div>
+        <h2 style={{ fontSize: 21, fontWeight: 800, marginTop: 4, marginBottom: 16 }}>물품 수정</h2>
+
+        <div className="label">물품 이름</div>
+        <input className="field-input" value={foodName} onChange={(e) => setFoodName(e.target.value)} maxLength={30} />
+
+        <div className="label" style={{ marginTop: 16, display: "flex", justifyContent: "space-between" }}>
+          <span>정원 수</span><span className="hint">최대 10명</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 0" }}>
+          <button className="cap-btn" onClick={() => setCapacity((c) => Math.max(1, c - 1))} aria-label="감소"><Icon.Minus /></button>
+          <span style={{ minWidth: 60, textAlign: "center", fontSize: 20, fontWeight: 700, fontFamily: "var(--font-en)" }}>{capacity}명</span>
+          <button className="cap-btn" onClick={() => setCapacity((c) => Math.min(10, c + 1))} aria-label="증가"><Icon.Plus /></button>
+        </div>
+
+        <div className="label" style={{ marginTop: 16 }}>상세 내용</div>
+        {!detailsLoaded ? (
+          <div style={{ padding: "20px 0", textAlign: "center", color: "var(--ink-4)", fontSize: 12 }}>불러오는 중…</div>
+        ) : (
+          <textarea className="field-input textarea" value={details} onChange={(e) => setDetails(e.target.value)} maxLength={500} rows={4} />
+        )}
+
+        {error && (
+          <div style={{ marginTop: 14, padding: "10px 12px", background: "#FBEAE5", border: "1px solid var(--danger-100)", borderRadius: 8, color: "var(--danger)", fontSize: 12.5 }}>{error}</div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+          <button className="btn ghost" style={{ flex: 1 }} onClick={onClose}>취소</button>
+          <button className="btn primary" style={{ flex: 2 }} onClick={save} disabled={busy || !foodName.trim()}>{busy ? "저장 중…" : "저장하기"}</button>
+        </div>
+      </div>
+
+      <style>{`
+        .modal-scrim { position: fixed; inset: 0; background: rgba(31,29,24,0.45); backdrop-filter: blur(2px); z-index: 200; display: grid; place-items: center; padding: 20px; }
+        .modal { width: 100%; max-width: 440px; background: var(--surface); border-radius: 14px; padding: 28px; position: relative; box-shadow: var(--shadow-pop); }
+        .modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-3); }
+        .modal-close:hover { background: var(--bg-2); color: var(--ink); }
+        .cap-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); display: grid; place-items: center; }
+        .cap-btn:hover { border-color: var(--primary); color: var(--primary); }
+      `}</style>
     </div>
   );
 }
