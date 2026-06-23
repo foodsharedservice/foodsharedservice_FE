@@ -1,6 +1,103 @@
 /* ============================================================
-   냠냠 — 음식 나눔 서비스 디자인 시스템
-   톤: 동네 카페 · 따뜻하고 정돈된 · 약간 레트로
+   나눔마켓 — 음식 나눔 서비스 디자인 시스템 (Warm Market)
+   톤: 동네 장터의 온기 · 따뜻한 앰버/크림 · 정갈한 신뢰감
+   Tailwind v4 유틸리티 + 기존 컴포넌트 CSS를 함께 사용한다.
+   ============================================================ */
+
+@import "tailwindcss";
+
+/* ---- Warm Market 디자인 토큰 (Tailwind 유틸리티 매핑) ----
+   bg-amber / text-foreground / bg-cream / shadow-warm 등으로 사용 */
+@theme {
+  --color-background: oklch(0.98 0.012 85);   /* 따뜻한 아이보리 */
+  --color-foreground: oklch(0.24 0.015 60);   /* 따뜻한 차콜 */
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.24 0.015 60);
+  --color-muted: oklch(0.95 0.012 85);
+  --color-muted-foreground: oklch(0.52 0.022 70);
+  --color-border: oklch(0.90 0.012 80);
+  --color-input: oklch(0.93 0.012 80);
+  --color-ring: oklch(0.72 0.15 55);
+
+  /* 시그니처 — 따뜻한 앰버 오렌지 */
+  --color-amber: oklch(0.72 0.15 55);
+  --color-amber-dark: oklch(0.62 0.16 50);
+  --color-amber-light: oklch(0.86 0.10 68);
+
+  /* 보조 — 딥 올리브 그린 / 크림 */
+  --color-olive: oklch(0.42 0.08 135);
+  --color-cream: oklch(0.965 0.014 85);
+
+  /* shadcn 호환 시맨틱 토큰 */
+  --color-primary: oklch(0.42 0.08 135);      /* 딥 올리브 */
+  --color-primary-foreground: oklch(1 0 0);
+  --color-secondary: oklch(0.94 0.02 120);
+  --color-secondary-foreground: oklch(0.38 0.06 135);
+  --color-accent: oklch(0.82 0.13 66);        /* 밝은 앰버(다크 배경 강조) */
+  --color-accent-foreground: oklch(0.30 0.05 60);
+  --color-destructive: oklch(0.58 0.18 25);
+  --color-destructive-foreground: oklch(1 0 0);
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Noto Sans KR", sans-serif;
+}
+
+/* ---- 공용 레이아웃/유틸리티 (새 디자인 화면용) ---- */
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  @media (min-width: 640px) {
+    .container { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .container { padding-left: 2rem; padding-right: 2rem; max-width: 1280px; }
+  }
+
+  /* 따뜻한 앰버 틴트 그림자 */
+  .shadow-warm { box-shadow: 0 4px 24px oklch(0.72 0.15 55 / 0.12); }
+  .shadow-warm-lg { box-shadow: 0 8px 40px oklch(0.72 0.15 55 / 0.18); }
+
+  /* 카드 호버 lift */
+  .card-lift { transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1); }
+  .card-lift:hover { transform: translateY(-6px); box-shadow: 0 14px 40px oklch(0.72 0.15 55 / 0.18); }
+
+  /* 상태 배지 (Warm Market) */
+  .badge-in-progress { background: oklch(0.92 0.07 135); color: oklch(0.38 0.09 135); }
+  .badge-completed   { background: oklch(0.90 0.05 235); color: oklch(0.40 0.10 235); }
+  .badge-incomplete  { background: oklch(0.92 0.008 80); color: oklch(0.48 0.02 70); }
+  .badge-expired     { background: oklch(0.90 0.07 25);  color: oklch(0.48 0.16 25); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in-up { animation: fade-in-up 0.45s cubic-bezier(0.23, 1, 0.32, 1) both; }
+.animate-fade-in { animation: fade-in 0.3s ease-out both; }
+.stagger-1 { animation-delay: 60ms; }
+.stagger-2 { animation-delay: 120ms; }
+.stagger-3 { animation-delay: 180ms; }
+.stagger-4 { animation-delay: 240ms; }
+.stagger-5 { animation-delay: 300ms; }
+.stagger-6 { animation-delay: 360ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up, .animate-fade-in, .card-lift {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ============================================================
+   기존 컴포넌트 디자인 시스템 (앱 내부 화면 — 따뜻한 톤 유지)
    ============================================================ */
 
 :root {
@@ -10,10 +107,10 @@
   --primary-100:    #ECEFE3;
   --primary-50:     #F4F6EE;
 
-  --accent:         #D4A848;          /* 머스타드 */
-  --accent-700:     #B58F33;
-  --accent-100:     #F6ECD0;
-  --accent-50:      #FBF6E6;
+  --accent:         #E08A2E;          /* 따뜻한 앰버 오렌지 (시그니처) */
+  --accent-700:     #C0741C;
+  --accent-100:     #F8E4C6;
+  --accent-50:      #FCF3E3;
 
   --danger:         #B14A3C;          /* 따뜻한 톤의 빨강 */
   --danger-100:    #F5DDD6;
@@ -280,10 +377,10 @@ ul, ol { list-style: none; }
   white-space: nowrap;
 }
 .btn.primary {
-  background: var(--primary);
-  color: #FBF9F2;
+  background: var(--accent);          /* 시그니처 앰버 */
+  color: #FFFFFF;
 }
-.btn.primary:hover { background: var(--primary-700); }
+.btn.primary:hover { background: var(--accent-700); }
 .btn.ghost {
   background: transparent;
   color: var(--primary);

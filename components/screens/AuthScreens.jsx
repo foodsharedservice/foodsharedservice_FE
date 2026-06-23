@@ -15,10 +15,10 @@ import API from "@/lib/api";
 function AuthBrandPane() {
   return (
     <div className="auth-brandpane">
-      <div className="logo">냠냠</div>
+      <div className="logo">나눔마켓</div>
       <div className="auth-tagline">
-        오늘도 한 끼,<br />
-        <em>이웃과 나눕니다</em>
+        남은 음식의<br />
+        <em>새 주인을 찾아드려요</em>
       </div>
       <div className="auth-sub">
         미개봉 가공식품을 우리 동네 이웃과 나누는 따뜻한 거래. 소비기한은 AI가 직접 읽어 확인해요.

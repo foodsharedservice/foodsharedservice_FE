@@ -1,11 +1,13 @@
-# 냠냠 · 음식 나눔 서비스 (Frontend)
+# 나눔마켓 · 음식 나눔 서비스 (Frontend)
 
-미개봉 가공식품을 동네 이웃과 나누는 **당근마켓 스타일** 음식 나눔 서비스의 프론트엔드입니다.
+미개봉 가공식품을 동네 이웃과 나누는 **Warm Market** 컨셉의 음식 나눔 서비스 프론트엔드입니다.
 [`food_shared_serivce`](https://github.com/foodsharedservice) 백엔드의 **실제 배포 API**(`https://api.foodshare.click/api/v1`)에 1:1로 맞춰 구현했습니다.
 
 - **Framework**: Next.js 14 (App Router)
 - **Language**: JavaScript (JSX) + React 18
-- **Styling**: 디자인 시스템 CSS (`app/globals.css`) — 별도 UI 라이브러리 없음
+- **Styling**: Tailwind CSS v4 (`@theme` 디자인 토큰) + 컴포넌트 CSS (`app/globals.css`)
+- **Design**: Warm Market — 따뜻한 앰버/크림 팔레트, 딥 올리브 보조색
+- **Icons**: `lucide-react`
 - **실시간 채팅**: STOMP over WebSocket (`@stomp/stompjs`)
 - **Fonts**: Pretendard(본문) / Inter · JetBrains Mono(숫자·라벨)
 - **Deploy**: Vercel
