@@ -12,15 +12,15 @@ export default function ChatLayout({ children }) {
   const inRoom = /^\/chat\/.+/.test(pathname || ""); // 방이 열려 있는지
 
   return (
-    <div className="flex h-[calc(100vh-64px)] max-w-[1100px] w-full mx-auto">
+    <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden">
       <aside
-        className={`w-full md:w-[360px] md:flex-shrink-0 h-full overflow-y-auto md:border-r border-border ${
+        className={`w-full md:w-80 lg:w-96 md:flex-shrink-0 h-full overflow-y-auto bg-card md:border-r border-border ${
           inRoom ? "hidden md:block" : "block"
         }`}
       >
         <ChatListScreen />
       </aside>
-      <section className={`flex-1 min-w-0 h-full ${inRoom ? "block" : "hidden md:block"}`}>
+      <section className={`flex-1 min-w-0 h-full flex flex-col ${inRoom ? "flex" : "hidden md:flex"}`}>
         {children}
       </section>
     </div>
