@@ -64,8 +64,10 @@ export function ChatListScreen() {
   return (
     <div className="w-full p-4 sm:p-5">
       <div className="mb-4 px-0.5">
-        <div className="text-xs font-semibold tracking-widest uppercase text-amber">CHAT</div>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground mt-1">채팅</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">채팅</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {rooms.length > 0 ? `${rooms.length}개의 대화` : "대화 목록"}
+        </p>
       </div>
 
       {error ? (
@@ -73,15 +75,15 @@ export function ChatListScreen() {
       ) : rooms.length === 0 ? (
         <StateBox kind="empty" title="아직 채팅이 없어요" sub="물품 상세에서 ‘채팅하기’로 등록자와 대화를 시작해보세요." />
       ) : (
-        <div className="bg-card rounded-2xl border border-border shadow-warm overflow-hidden divide-y divide-border">
+        <div className="flex flex-col gap-1">
           {rooms.map((r) => {
             const active = r.roomId === activeRoomId;
             return (
               <button
                 key={r.roomId}
                 onClick={() => router.push(`/chat/${r.roomId}`)}
-                className={`flex items-center gap-3.5 w-full text-left p-4 hover:bg-muted transition-colors border-l-[3px] ${
-                  active ? "bg-muted border-l-amber" : "border-l-transparent"
+                className={`flex items-center gap-3.5 w-full text-left p-3 rounded-xl transition-colors ${
+                  active ? "bg-amber/10" : "hover:bg-muted"
                 }`}
               >
                 <Avatar name={r.partnerNickName || "?"} size={48} />
@@ -94,7 +96,7 @@ export function ChatListScreen() {
                   <div className="text-sm text-muted-foreground truncate mt-0.5">{r.lastMessage || "대화를 시작해보세요"}</div>
                 </div>
                 {r.unreadCount > 0 && (
-                  <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-white text-[11px] font-bold grid place-items-center flex-shrink-0">
+                  <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-amber text-white text-[11px] font-bold grid place-items-center flex-shrink-0">
                     {r.unreadCount}
                   </span>
                 )}
@@ -136,9 +138,16 @@ function readHistory(hist) {
 /* ============ 빈 화면(데스크톱: 방 미선택 시 우측 패널) ============ */
 export function ChatEmptyPane() {
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center gap-3.5 text-muted-foreground">
-      <div className="w-16 h-16 rounded-2xl bg-muted grid place-items-center"><Icon.Chat /></div>
-      <p className="text-[15px] font-semibold">대화방을 선택해주세요</p>
+    <div className="h-full w-full flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="w-20 h-20 rounded-2xl bg-amber/10 text-amber grid place-items-center">
+        <Icon.Chat width={32} height={32} />
+      </div>
+      <p className="text-lg font-bold text-foreground">채팅을 선택해주세요</p>
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        왼쪽 목록에서 대화를 선택하거나,
+        <br />
+        물품 상세 페이지에서 채팅을 시작하세요.
+      </p>
     </div>
   );
 }
@@ -291,13 +300,6 @@ export function ChatRoomScreen({ roomId }) {
       ? messages.findIndex((m) => m.messageId != null && m.messageId > anchorId)
       : -1;
 
-  const statusCls =
-    status === "connected"
-      ? "text-primary"
-      : status === "error" || status === "disconnected"
-      ? "text-destructive"
-      : "text-muted-foreground";
-
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-card">
@@ -308,24 +310,37 @@ export function ChatRoomScreen({ roomId }) {
         >
           <Icon.ChevronLeft />
         </button>
+        <Avatar name={(room && room.partnerNickName) || "?"} size={40} />
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-foreground truncate">{room ? (room.partnerNickName || "상대") : "채팅"}</div>
-          {room && (
-            <div
-              className="text-xs font-semibold text-amber truncate cursor-pointer"
-              onClick={() => router.push(`/foods/${room.foodId}`)}
-            >
-              {room.foodName} →
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-foreground truncate">{room ? (room.partnerNickName || "상대") : "채팅"}</span>
+            <span
+              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                status === "connected" ? "bg-primary" : status === "error" || status === "disconnected" ? "bg-destructive" : "bg-muted-foreground"
+              }`}
+              title={status === "connected" ? "실시간 연결됨" : status === "connecting" ? "연결 중" : "연결 끊김"}
+            />
+          </div>
+          {room && room.foodName && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground truncate mt-0.5">
+              <Icon.Pin width={12} height={12} className="flex-shrink-0" />
+              <span className="truncate">{room.foodName}</span>
             </div>
           )}
         </div>
-        <span className={`text-xs font-semibold whitespace-nowrap ${statusCls}`}>
-          {status === "connected" ? "● 실시간" : status === "connecting" ? "연결 중" : "연결 끊김"}
-        </span>
+        {room && (
+          <button
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-background text-xs font-semibold text-foreground hover:bg-muted transition-colors flex-shrink-0"
+            onClick={() => router.push(`/foods/${room.foodId}`)}
+          >
+            <Icon.Heart width={14} height={14} />
+            물품 보기
+          </button>
+        )}
       </div>
 
       <div
-        className="flex-1 overflow-y-auto p-4 m-3 rounded-2xl border border-border bg-card shadow-warm flex flex-col gap-2.5"
+        className="flex-1 overflow-y-auto p-4 bg-background flex flex-col gap-2.5"
         ref={scrollRef}
         onScroll={(e) => {
           const el = e.currentTarget;
@@ -363,8 +378,8 @@ export function ChatRoomScreen({ roomId }) {
                     <div
                       className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
                         m.mine
-                          ? "bg-primary text-white border border-primary"
-                          : "bg-muted border border-border text-foreground"
+                          ? "bg-amber text-white border border-amber"
+                          : "bg-card border border-border text-foreground"
                       }`}
                     >
                       {m.content}
