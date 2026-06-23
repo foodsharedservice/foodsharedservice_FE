@@ -127,253 +127,252 @@ export default function RegisterScreen() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="register">
+    <div className="min-h-screen bg-background pb-16">
       <input ref={coverInputRef} type="file" accept="image/*" hidden onChange={onPickCover} />
       <input ref={moreInputRef} type="file" accept="image/*" multiple hidden onChange={onPickMore} />
 
-      <div className="register-head">
-        <button className="crumb-back" onClick={() => router.push("/")}>
-          <Icon.ChevronLeft /> 돌아가기
-        </button>
-        <h1 className="register-title">물품 등록</h1>
-      </div>
+      <div className="container pt-20 pb-6 sm:pt-24">
+        {/* Header row */}
+        <div className="flex items-center gap-3 sm:gap-4 mb-6 animate-fade-in-up">
+          <button
+            onClick={() => router.push("/")}
+            className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-full bg-card border border-border text-foreground/80 font-medium hover:border-amber hover:text-amber transition-colors"
+          >
+            <Icon.ChevronLeft /> 돌아가기
+          </button>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">물품 등록</h1>
+        </div>
 
-      <div className="register-grid">
-        {/* ============ LEFT: 소비기한 사진 + AI ============ */}
-        <div>
-          <section className="register-card">
-            <div className="card-head">
-              <div>
-                <div className="eyebrow">STEP 1 · 필수</div>
-                <h3 className="card-title">소비기한 사진</h3>
-              </div>
-              <div className="ai-chip"><Icon.Sparkle /> AI 자동 인식</div>
-            </div>
-            <p className="card-help">
-              가공식품 라벨의 <b>소비기한이 잘 보이도록</b> 찍어주세요. 사진을 올리면 AI가 소비기한을 자동으로 읽어 설정해요.
-            </p>
-
-            <div className="exp-upload">
-              {!cover ? (
-                <button className="exp-empty" onClick={() => coverInputRef.current?.click()}>
-                  <Icon.Camera />
-                  <div className="exp-empty-title">소비기한 사진을 올려주세요</div>
-                  <div className="exp-empty-sub">JPG · PNG · 소비기한이 보이게</div>
-                  <div className="btn primary sm" style={{ marginTop: 14 }}>파일 선택</div>
-                </button>
-              ) : (
-                <div className="exp-shot">
-                  <Photo label="소비기한 사진" src={cover.url} />
-                  <button className="exp-replace" onClick={() => coverInputRef.current?.click()}>다시 올리기</button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* ============ LEFT: 소비기한 사진 + AI ============ */}
+          <div className="flex flex-col gap-6">
+            {/* STEP 1 — 소비기한 사진 */}
+            <section className="bg-card rounded-2xl border border-border shadow-warm p-5 sm:p-6 animate-fade-in-up stagger-1">
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <div>
+                  <div className="text-xs font-semibold tracking-widest uppercase text-amber">STEP 1 · 필수</div>
+                  <h3 className="text-lg font-bold text-foreground mt-1">소비기한 사진</h3>
                 </div>
-              )}
-            </div>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber/10 text-amber-dark text-xs font-semibold flex-shrink-0">
+                  <Icon.Sparkle /> AI 자동 인식
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                가공식품 라벨의 <b className="font-semibold text-foreground">소비기한이 잘 보이도록</b> 찍어주세요. 사진을 올리면 AI가 소비기한을 자동으로 읽어 설정해요.
+              </p>
 
-            {/* AI 인식 결과 카드 */}
-            <div className={`ai-result ${aiState}`}>
+              {/* 업로드 영역 */}
+              <div className="mb-4">
+                {!cover ? (
+                  <button
+                    onClick={() => coverInputRef.current?.click()}
+                    className="w-full aspect-[4/3] flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-border bg-muted text-muted-foreground hover:border-amber hover:bg-amber/5 transition-colors"
+                  >
+                    <Icon.Camera className="w-8 h-8 text-muted-foreground" />
+                    <div className="text-sm font-semibold text-foreground mt-1.5">소비기한 사진을 올려주세요</div>
+                    <div className="text-xs text-muted-foreground">JPG · PNG · 소비기한이 보이게</div>
+                    <span className="inline-flex items-center justify-center gap-2 h-9 px-4 text-sm rounded-full bg-amber text-white font-semibold shadow-warm mt-3">파일 선택</span>
+                  </button>
+                ) : (
+                  <div className="relative">
+                    <Photo label="소비기한 사진" src={cover.url} ratio="4/3" className="rounded-xl overflow-hidden" />
+                    <button
+                      onClick={() => coverInputRef.current?.click()}
+                      className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-foreground/75 text-white text-xs font-semibold backdrop-blur-sm hover:bg-foreground transition-colors"
+                    >
+                      다시 올리기
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* AI 인식 결과 카드 */}
               {aiState === "empty" && (
-                <div className="ai-empty">
-                  <div className="ai-icon"><Icon.Sparkle /></div>
+                <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-muted p-4">
+                  <span className="w-8 h-8 rounded-full bg-muted-foreground text-card grid place-items-center flex-shrink-0"><Icon.Sparkle /></span>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>소비기한 인식 대기 중</div>
-                    <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>사진을 올리면 자동으로 인식해요</div>
+                    <div className="text-sm font-semibold text-foreground">소비기한 인식 대기 중</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">사진을 올리면 자동으로 인식해요</div>
                   </div>
                 </div>
               )}
               {aiState === "loading" && (
-                <div className="ai-loading">
-                  <div className="ai-spin"></div>
+                <div className="flex items-center gap-3 rounded-xl border border-amber/30 bg-amber/10 p-4">
+                  <span className="w-7 h-7 rounded-full border-[2.5px] border-amber/30 border-t-amber animate-spin flex-shrink-0" />
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>AI가 소비기한을 읽는 중…</div>
-                    <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>보통 2-5초 정도 걸려요</div>
+                    <div className="text-sm font-semibold text-foreground">AI가 소비기한을 읽는 중…</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">보통 2-5초 정도 걸려요</div>
                   </div>
                 </div>
               )}
               {aiState === "done" && (
-                <div className="ai-done">
-                  <div className="ai-done-row">
-                    <div className="eyebrow" style={{ color: "var(--primary)" }}>
-                      AI 인식 결과 <Icon.Lock style={{ verticalAlign: "middle", marginLeft: 2 }} />
-                    </div>
+                <div className="rounded-xl border border-amber/30 bg-gradient-to-br from-amber/15 to-cream p-4">
+                  <div className="flex items-center gap-1 text-xs font-semibold tracking-widest uppercase text-primary">
+                    AI 인식 결과 <Icon.Lock />
                   </div>
-                  <div className="ai-date font-en">{expDate}</div>
-                  <div className="ai-hint">
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground mt-1 tabular-nums tracking-tight">{expDate}</div>
+                  <div className="text-xs text-muted-foreground mt-2 leading-relaxed">
                     인식이 잘못됐다면 사진을 다시 올려주세요.<br />
                     소비기한은 사용자가 임의로 수정할 수 없어요.
                   </div>
                 </div>
               )}
               {aiState === "error" && (
-                <div className="ai-empty">
-                  <div className="ai-icon err">!</div>
+                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-destructive">
+                  <span className="w-8 h-8 rounded-full bg-destructive text-white font-extrabold grid place-items-center flex-shrink-0">!</span>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: "var(--danger)" }}>소비기한 인식 실패</div>
-                    <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>{aiError}</div>
-                    <button className="btn ghost sm" style={{ marginTop: 8 }} onClick={() => coverInputRef.current?.click()}>다시 올리기</button>
+                    <div className="text-sm font-semibold text-destructive">소비기한 인식 실패</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{aiError}</div>
+                    <button
+                      onClick={() => coverInputRef.current?.click()}
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-4 text-sm rounded-full bg-card border border-border text-foreground/80 font-medium hover:border-amber hover:text-amber transition-colors mt-2"
+                    >
+                      다시 올리기
+                    </button>
                   </div>
                 </div>
               )}
-            </div>
-          </section>
+            </section>
 
-          <section className="register-card">
-            <div className="card-head">
-              <div>
-                <div className="eyebrow">STEP 2 · 선택</div>
-                <h3 className="card-title">추가 사진</h3>
-              </div>
-              <span className="card-counter font-en">{photos.length} / 4</span>
-            </div>
-            <p className="card-help">제품 앞면·뒷면·라벨 등을 보여주면 신뢰도가 올라가요.</p>
-
-            <div className="photo-grid">
-              {photos.map((p) => (
-                <div className="reg-photo" key={p.id}>
-                  <Photo label="" src={p.url} ratio="1/1" />
-                  <button className="reg-photo-del" onClick={() => removePhoto(p.id)} aria-label="삭제"><Icon.X /></button>
+            {/* STEP 2 — 추가 사진 */}
+            <section className="bg-card rounded-2xl border border-border shadow-warm p-5 sm:p-6 animate-fade-in-up stagger-2">
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <div>
+                  <div className="text-xs font-semibold tracking-widest uppercase text-amber">STEP 2 · 선택</div>
+                  <h3 className="text-lg font-bold text-foreground mt-1">추가 사진</h3>
                 </div>
-              ))}
-              {photos.length < 4 && (
-                <button className="reg-photo-add" onClick={() => moreInputRef.current?.click()}>
-                  <Icon.Plus />
-                  <span>추가</span>
-                </button>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* ============ RIGHT: form ============ */}
-        <div>
-          <section className="register-card">
-            <div className="card-head">
-              <div>
-                <div className="eyebrow">STEP 3 · 필수</div>
-                <h3 className="card-title">물품 정보</h3>
+                <span className="text-xs text-muted-foreground tabular-nums">{photos.length} / 4</span>
               </div>
-            </div>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">제품 앞면·뒷면·라벨 등을 보여주면 신뢰도가 올라가요.</p>
 
-            <div className="label">물품 이름</div>
-            <input className="field-input" value={foodName} onChange={(e) => setFoodName(e.target.value)}
-              placeholder="예) 미개봉 시리얼" maxLength={30} />
-            <div style={{ textAlign: "right", fontSize: 11, color: "var(--ink-4)", marginTop: 4, fontFamily: "var(--font-en)" }}>
-              {foodName.length} / 30
-            </div>
-
-            <div className="label" style={{ marginTop: 18, display: "flex", justifyContent: "space-between" }}>
-              <span>정원 수 <span className="hint">(나눠 받을 인원)</span></span>
-              <span className="hint">최대 10명</span>
-            </div>
-            <div className="capacity-stepper">
-              <button className="cap-btn" onClick={() => setCapacity((c) => Math.max(1, c - 1))} aria-label="감소"><Icon.Minus /></button>
-              <div className="cap-value">
-                <span className="font-en">{capacity}</span>
-                <span style={{ fontSize: 14, color: "var(--ink-4)", fontWeight: 500 }}>명</span>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {photos.map((p) => (
+                  <div className="relative aspect-square" key={p.id}>
+                    <Photo label="" src={p.url} ratio="1/1" className="rounded-xl overflow-hidden w-full h-full" />
+                    <button
+                      onClick={() => removePhoto(p.id)}
+                      aria-label="삭제"
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-foreground/75 text-white grid place-items-center hover:bg-foreground transition-colors"
+                    >
+                      <Icon.X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {photos.length < 4 && (
+                  <button
+                    onClick={() => moreInputRef.current?.click()}
+                    className="aspect-square flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border bg-muted text-muted-foreground text-xs font-medium hover:border-amber hover:text-amber hover:bg-amber/5 transition-colors"
+                  >
+                    <Icon.Plus />
+                    <span>추가</span>
+                  </button>
+                )}
               </div>
-              <button className="cap-btn" onClick={() => setCapacity((c) => Math.min(10, c + 1))} aria-label="증가"><Icon.Plus /></button>
-            </div>
-
-            <div className="label" style={{ marginTop: 18 }}>
-              상세 내용 <span className="hint">(픽업 방법, 보관 상태 등)</span>
-            </div>
-            <textarea className="field-input textarea" value={details} onChange={(e) => setDetails(e.target.value)}
-              maxLength={500} placeholder="미개봉, 박스째 나눔 OK · 직거래 희망 위치 · 보관 상태 등을 적어주세요" />
-            <div style={{ textAlign: "right", fontSize: 11, color: "var(--ink-4)", marginTop: 4, fontFamily: "var(--font-en)" }}>
-              {details.length} / 500
-            </div>
-          </section>
-
-          <div className="register-rules">
-            <Icon.Lock style={{ flexShrink: 0, marginTop: 2 }} />
-            <div>
-              <b>등록 규칙</b>
-              <ul>
-                <li>가공·미개봉 식품만 등록해주세요 (직접 만든 음식·신선식품 ✕)</li>
-                <li>소비기한은 사진을 AI가 읽어 자동 설정 · 사용자 수정 불가</li>
-                <li>회원당 활성 물품은 최대 10개</li>
-              </ul>
-            </div>
+            </section>
           </div>
 
-          <FormError>{submitError}</FormError>
+          {/* ============ RIGHT: form ============ */}
+          <div className="flex flex-col gap-6">
+            {/* STEP 3 — 물품 정보 */}
+            <section className="bg-card rounded-2xl border border-border shadow-warm p-5 sm:p-6 animate-fade-in-up stagger-3">
+              <div className="mb-4">
+                <div className="text-xs font-semibold tracking-widest uppercase text-amber">STEP 3 · 필수</div>
+                <h3 className="text-lg font-bold text-foreground mt-1">물품 정보</h3>
+              </div>
 
-          <div className="register-cta">
-            <button className="btn ghost lg" onClick={() => router.push("/")}>취소</button>
-            <button className="btn primary lg" style={{ flex: 1 }} disabled={!canSubmit} onClick={submitFood}>
-              {busy ? "등록 중…"
-                : !cover ? "소비기한 사진을 먼저 올려주세요"
-                : aiState === "loading" ? "소비기한 인식 중…"
-                : aiState !== "done" ? "소비기한 사진을 다시 올려주세요"
-                : !foodName.trim() ? "물품 이름을 입력해주세요"
-                : !details.trim() ? "상세 내용을 입력해주세요"
-                : "등록하기"}
-            </button>
+              {/* 물품 이름 */}
+              <label className="block text-sm font-semibold text-foreground mb-2">물품 이름</label>
+              <input
+                className="w-full h-12 px-4 rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber transition"
+                value={foodName}
+                onChange={(e) => setFoodName(e.target.value)}
+                placeholder="예) 미개봉 시리얼"
+                maxLength={30}
+              />
+              <div className="text-right text-xs text-muted-foreground mt-1 tabular-nums">{foodName.length} / 30</div>
+
+              {/* 정원 수 */}
+              <div className="flex items-center justify-between mt-5 mb-2">
+                <label className="text-sm font-semibold text-foreground">
+                  정원 수 <span className="font-normal text-muted-foreground">(나눠 받을 인원)</span>
+                </label>
+                <span className="text-xs text-muted-foreground">최대 10명</span>
+              </div>
+              <div className="inline-flex items-center gap-3 p-1 bg-muted rounded-xl">
+                <button
+                  onClick={() => setCapacity((c) => Math.max(1, c - 1))}
+                  aria-label="감소"
+                  className="w-9 h-9 rounded-lg bg-card border border-border grid place-items-center text-foreground hover:border-amber hover:text-amber transition-colors"
+                >
+                  <Icon.Minus />
+                </button>
+                <div className="min-w-[72px] flex items-baseline justify-center gap-1 text-center">
+                  <span className="text-xl font-bold text-foreground tabular-nums">{capacity}</span>
+                  <span className="text-sm font-medium text-muted-foreground">명</span>
+                </div>
+                <button
+                  onClick={() => setCapacity((c) => Math.min(10, c + 1))}
+                  aria-label="증가"
+                  className="w-9 h-9 rounded-lg bg-card border border-border grid place-items-center text-foreground hover:border-amber hover:text-amber transition-colors"
+                >
+                  <Icon.Plus />
+                </button>
+              </div>
+
+              {/* 상세 내용 */}
+              <label className="block text-sm font-semibold text-foreground mt-5 mb-2">
+                상세 내용 <span className="font-normal text-muted-foreground">(픽업 방법, 보관 상태 등)</span>
+              </label>
+              <textarea
+                className="w-full min-h-[140px] px-4 py-3 rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber transition resize-y leading-relaxed"
+                value={details}
+                onChange={(e) => setDetails(e.target.value)}
+                maxLength={500}
+                placeholder="미개봉, 박스째 나눔 OK · 직거래 희망 위치 · 보관 상태 등을 적어주세요"
+              />
+              <div className="text-right text-xs text-muted-foreground mt-1 tabular-nums">{details.length} / 500</div>
+            </section>
+
+            {/* 등록 규칙 */}
+            <div className="flex gap-3 rounded-xl border border-primary/15 bg-primary/5 p-4 text-primary animate-fade-in-up stagger-4">
+              <Icon.Lock className="flex-shrink-0 mt-0.5" />
+              <div className="text-sm leading-relaxed">
+                <b className="block font-bold text-foreground mb-1">등록 규칙</b>
+                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                  <li>가공·미개봉 식품만 등록해주세요 (직접 만든 음식·신선식품 ✕)</li>
+                  <li>소비기한은 사진을 AI가 읽어 자동 설정 · 사용자 수정 불가</li>
+                  <li>회원당 활성 물품은 최대 10개</li>
+                </ul>
+              </div>
+            </div>
+
+            <FormError>{submitError}</FormError>
+
+            {/* CTA */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => router.push("/")}
+                className="inline-flex items-center justify-center gap-1.5 h-12 px-6 rounded-full bg-card border border-border text-foreground/80 font-medium hover:border-amber hover:text-amber transition-colors"
+              >
+                취소
+              </button>
+              <button
+                disabled={!canSubmit}
+                onClick={submitFood}
+                className="flex-1 inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full bg-amber text-white font-semibold shadow-warm hover:bg-amber-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {busy ? "등록 중…"
+                  : !cover ? "소비기한 사진을 먼저 올려주세요"
+                  : aiState === "loading" ? "소비기한 인식 중…"
+                  : aiState !== "done" ? "소비기한 사진을 다시 올려주세요"
+                  : !foodName.trim() ? "물품 이름을 입력해주세요"
+                  : !details.trim() ? "상세 내용을 입력해주세요"
+                  : "등록하기"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        .register { padding-bottom: 60px; }
-        .register-head { display: flex; align-items: center; gap: 16px; padding: 16px 32px; max-width: 1280px; margin: 0 auto; }
-        .register-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
-        .register-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 0 32px; max-width: 1280px; margin: 0 auto; }
-        .register-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 22px 24px; margin-bottom: 16px; box-shadow: var(--shadow-card); }
-        .card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
-        .card-title { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; }
-        .card-help { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; margin-bottom: 14px; line-height: 1.55; }
-        .card-counter { font-size: 12px; color: var(--ink-3); }
-        .ai-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--accent-100); color: var(--accent-700); border-radius: 999px; font-size: 11.5px; font-weight: 700; }
-        .exp-upload { margin-bottom: 12px; }
-        .exp-empty { width: 100%; aspect-ratio: 4/3; padding: 0; border-radius: var(--r-img); border: 1.5px dashed var(--line-2); background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--ink-3); transition: all 0.12s; }
-        .exp-empty:hover { border-color: var(--primary); background: var(--primary-50); }
-        .exp-empty svg { width: 32px; height: 32px; color: var(--ink-4); }
-        .exp-empty-title { font-size: 14px; font-weight: 600; color: var(--ink-2); margin-top: 6px; }
-        .exp-empty-sub { font-size: 11.5px; color: var(--ink-4); font-family: var(--font-en); }
-        .exp-shot { position: relative; }
-        .exp-shot .ph { aspect-ratio: 4/3; }
-        .exp-replace { position: absolute; top: 10px; right: 10px; padding: 5px 10px; background: rgba(31,29,24,0.78); color: var(--bg); border-radius: 6px; font-size: 11.5px; font-weight: 600; backdrop-filter: blur(6px); }
-        .exp-replace:hover { background: var(--ink); }
-        .ai-result { border-radius: 10px; padding: 14px 16px; transition: all 0.2s ease; }
-        .ai-result.empty { background: var(--bg-2); border: 1px dashed var(--line-2); }
-        .ai-result.loading { background: var(--primary-50); border: 1px solid var(--primary-100); }
-        .ai-result.done { background: linear-gradient(135deg, var(--accent-50), var(--surface-2)); border: 1px solid var(--accent-100); }
-        .ai-result.error { background: var(--danger-100); border: 1px solid var(--danger-100); }
-        .ai-empty, .ai-loading { display: flex; align-items: center; gap: 12px; }
-        .ai-icon { width: 32px; height: 32px; background: var(--ink-5); color: var(--surface); border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; }
-        .ai-icon.err { background: var(--danger); color: #fff; font-weight: 800; }
-        .ai-spin { width: 28px; height: 28px; border: 2.5px solid var(--primary-100); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .ai-done-row { display: flex; align-items: center; justify-content: space-between; }
-        .ai-date { font-family: var(--font-en); font-size: 30px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); margin-top: 4px; font-variant-numeric: tabular-nums; }
-        .ai-hint { font-size: 11.5px; color: var(--ink-3); margin-top: 8px; line-height: 1.55; }
-        .photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .reg-photo { position: relative; aspect-ratio: 1/1; }
-        .reg-photo .ph { border-radius: 10px; width: 100%; height: 100%; }
-        .reg-photo-del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; background: rgba(31,29,24,0.78); color: #fff; border-radius: 50%; display: grid; place-items: center; }
-        .reg-photo-del svg { width: 12px; height: 12px; }
-        .reg-photo-add { aspect-ratio: 1/1; padding: 0; background: var(--surface-2); border: 1.5px dashed var(--line-2); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink-3); font-size: 11px; }
-        .reg-photo-add:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-50); }
-        .capacity-stepper { display: flex; align-items: center; gap: 12px; padding: 4px; background: var(--bg-2); border-radius: var(--r-btn); width: fit-content; }
-        .cap-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); display: grid; place-items: center; }
-        .cap-btn:hover { border-color: var(--primary); color: var(--primary); }
-        .cap-value { min-width: 80px; font-size: 22px; font-weight: 700; text-align: center; display: inline-flex; align-items: baseline; gap: 4px; justify-content: center; }
-        .register-rules { display: flex; gap: 10px; padding: 14px 16px; background: var(--primary-50); border: 1px solid var(--primary-100); border-radius: var(--r-card); color: var(--primary-700); font-size: 12.5px; line-height: 1.6; margin-bottom: 16px; }
-        .register-rules svg { color: var(--primary); }
-        .register-rules b { font-weight: 700; display: block; margin-bottom: 4px; color: var(--ink); }
-        .register-rules ul { padding-left: 14px; color: var(--ink-3); font-size: 12px; }
-        .register-rules li { list-style: disc; margin-top: 2px; }
-        .register-cta { display: flex; gap: 8px; }
-        @media (max-width: 900px) {
-          .register-head { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
-          .register-title { font-size: 18px; }
-          .register-grid { grid-template-columns: 1fr; gap: 0; padding: 0 16px; }
-          .register-card { padding: 18px 16px; }
-          .photo-grid { grid-template-columns: repeat(3, 1fr); }
-          .register-cta { flex-direction: column; }
-          .register-cta .btn { width: 100%; }
-          .ai-date { font-size: 24px; }
-        }
-      `}</style>
     </div>
   );
 }

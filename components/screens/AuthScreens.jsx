@@ -11,26 +11,62 @@ import { useAuth } from "@/components/AuthProvider";
 import AddressSearch from "@/components/AddressSearch";
 import API from "@/lib/api";
 
+/* ============ 공유 스타일 토큰 ============ */
+const INPUT_BASE =
+  "w-full h-12 px-4 rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber transition";
+const BTN_PRIMARY =
+  "w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full bg-amber text-white font-semibold shadow-warm hover:bg-amber-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+const BTN_GHOST =
+  "inline-flex items-center justify-center gap-1.5 h-12 px-5 rounded-full bg-card border border-border text-foreground/80 font-medium hover:border-amber hover:text-amber transition-colors";
+const BTN_SIDE =
+  "inline-flex items-center justify-center gap-1.5 h-12 px-4 whitespace-nowrap rounded-full bg-card border border-border text-foreground/80 font-medium hover:border-amber hover:text-amber transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+const LABEL = "block text-sm font-semibold text-foreground mb-2";
+const HINT = "font-normal text-muted-foreground text-xs";
+
 /* ============ shared brand panel ============ */
 function AuthBrandPane() {
   return (
-    <div className="auth-brandpane">
-      <div className="logo">나눔마켓</div>
-      <div className="auth-tagline">
-        남은 음식의<br />
-        <em>새 주인을 찾아드려요</em>
-      </div>
-      <div className="auth-sub">
-        미개봉 가공식품을 우리 동네 이웃과 나누는 따뜻한 거래. 소비기한은 AI가 직접 읽어 확인해요.
-      </div>
-      <div className="auth-pane-cards" aria-hidden="true">
-        <div className="auth-pane-card">
-          <Photo label="" emoji="🥫" />
-          <div className="auth-pane-card-meta"><span>참치캔 6개</span><span>D-12</span></div>
+    <div className="relative overflow-hidden bg-primary text-white p-8 sm:p-12 flex flex-col min-h-[180px] lg:min-h-screen">
+      {/* amber radial accent */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-60"
+        style={{
+          background:
+            "radial-gradient(circle at 80% 20%, color-mix(in oklch, var(--color-amber) 35%, transparent), transparent 55%)",
+        }}
+      />
+      <div className="relative z-10 flex flex-col flex-1">
+        <div className="flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-amber text-white grid place-items-center shadow-warm">
+            <Icon.Check />
+          </span>
+          <span className="text-lg font-bold tracking-tight">나눔마켓</span>
         </div>
-        <div className="auth-pane-card">
-          <Photo label="" emoji="🍪" />
-          <div className="auth-pane-card-meta"><span>초코파이</span><span>2/4</span></div>
+
+        <div className="mt-auto pt-8 lg:pt-0 lg:my-auto">
+          <h2 className="text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight">
+            남은 음식의<br />
+            <em className="text-amber-light not-italic">새 주인을 찾아드려요</em>
+          </h2>
+          <p className="mt-4 max-w-sm text-white/75 leading-relaxed hidden sm:block">
+            미개봉 가공식품을 우리 동네 이웃과 나누는 따뜻한 거래. 소비기한은 AI가 직접 읽어 확인해요.
+          </p>
+
+          <div className="mt-8 gap-4 hidden sm:flex" aria-hidden="true">
+            <div className="w-40 bg-white/10 backdrop-blur-sm rounded-2xl p-2 border border-white/15">
+              <Photo label="" emoji="🥫" />
+              <div className="flex items-center justify-between px-1 pt-2 text-xs text-white/85">
+                <span>참치캔 6개</span><span className="font-semibold text-amber-light">D-12</span>
+              </div>
+            </div>
+            <div className="w-40 bg-white/10 backdrop-blur-sm rounded-2xl p-2 border border-white/15">
+              <Photo label="" emoji="🍪" />
+              <div className="flex items-center justify-between px-1 pt-2 text-xs text-white/85">
+                <span>초코파이</span><span className="font-semibold text-amber-light">2/4</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -63,42 +99,50 @@ export function LoginScreen() {
   };
 
   return (
-    <div className="auth">
+    <div className="min-h-screen grid lg:grid-cols-2">
       <AuthBrandPane />
-      <div className="auth-formpane">
-        <div className="auth-card">
-          <div className="eyebrow auth-eyebrow">WELCOME BACK</div>
-          <h1 className="auth-title">로그인</h1>
-          <p className="auth-desc">이메일과 비밀번호로 로그인하세요.</p>
+      <div className="flex items-center justify-center p-6 sm:p-10 bg-background overflow-y-auto">
+        <div className="w-full max-w-md">
+          <div className="text-xs font-semibold tracking-widest uppercase text-amber">WELCOME BACK</div>
+          <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">로그인</h1>
+          <p className="mt-2 text-muted-foreground">이메일과 비밀번호로 로그인하세요.</p>
 
-          <div className="auth-field">
-            <div className="label">이메일</div>
-            <input className="field-input" type="email" placeholder="you@example.com"
+          <div className="mt-8">
+            <label className={LABEL}>이메일</label>
+            <input className={INPUT_BASE} type="email" placeholder="you@example.com"
               value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
-          <div className="auth-field">
-            <div className="label">비밀번호</div>
-            <input className="field-input" type="password" placeholder="••••••••••"
+          <div className="mt-5">
+            <label className={LABEL}>비밀번호</label>
+            <input className={INPUT_BASE} type="password" placeholder="••••••••••"
               value={pw} onChange={(e) => setPw(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submit()} />
           </div>
 
           <FormError>{error}</FormError>
 
-          <div className="auth-links">
-            <span>이메일 찾기</span>
-            <span>비밀번호 찾기</span>
+          <div className="mt-4 flex items-center justify-end gap-4 text-sm text-muted-foreground">
+            <span className="hover:text-primary transition-colors cursor-pointer">이메일 찾기</span>
+            <span className="hover:text-primary transition-colors cursor-pointer">비밀번호 찾기</span>
           </div>
 
-          <button className="btn primary lg" style={{ width: "100%" }} onClick={submit} disabled={busy || !email || !pw}>
-            {busy ? "로그인 중…" : "로그인"}
-          </button>
+          <div className="mt-6">
+            <button className={BTN_PRIMARY} onClick={submit} disabled={busy || !email || !pw}>
+              {busy ? "로그인 중…" : "로그인"}
+            </button>
+          </div>
 
-          <div className="auth-divider">또는</div>
+          <div className="flex items-center gap-3 text-muted-foreground text-xs my-5">
+            <span className="flex-1 h-px bg-border" />
+            또는
+            <span className="flex-1 h-px bg-border" />
+          </div>
 
-          <button className="btn ghost lg" style={{ width: "100%" }} onClick={() => router.push("/signup")}>회원 가입</button>
+          <button className={`${BTN_GHOST} w-full`} onClick={() => router.push("/signup")}>회원 가입</button>
 
-          <div className="auth-guest" onClick={() => router.push("/")}>비회원으로 둘러보기 →</div>
+          <div className="mt-6 text-center text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer" onClick={() => router.push("/")}>
+            비회원으로 둘러보기 →
+          </div>
         </div>
       </div>
     </div>
@@ -211,86 +255,95 @@ export function SignupScreen() {
   };
 
   return (
-    <div className="auth">
+    <div className="min-h-screen grid lg:grid-cols-2">
       <AuthBrandPane />
-      <div className="auth-formpane">
-        <div className="auth-card wide">
-          <div className="eyebrow auth-eyebrow">CREATE ACCOUNT</div>
-          <h1 className="auth-title">회원 가입</h1>
-          <p className="auth-desc">필수 정보를 입력해주세요.</p>
+      <div className="flex items-center justify-center p-6 sm:p-10 bg-background overflow-y-auto">
+        <div className="w-full max-w-lg">
+          <div className="text-xs font-semibold tracking-widest uppercase text-amber">CREATE ACCOUNT</div>
+          <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">회원 가입</h1>
+          <p className="mt-2 text-muted-foreground">필수 정보를 입력해주세요.</p>
 
           {/* 닉네임 */}
-          <div className="auth-field">
-            <div className="label">닉네임 <span className="hint">2–10자, 중복 불가</span></div>
-            <div className="verify-row">
-              <input className={`field-input ${nickState === "ok" ? "is-ok" : nickState === "dup" ? "is-err" : ""}`}
+          <div className="mt-8">
+            <label className={LABEL}>닉네임 <span className={HINT}>2–10자, 중복 불가</span></label>
+            <div className="flex gap-2 items-stretch">
+              <input
+                className={`${INPUT_BASE} flex-1 ${nickState === "ok" ? "border-primary" : nickState === "dup" ? "border-destructive" : ""}`}
                 placeholder="나눔러" value={nick}
                 onChange={(e) => { setNick(e.target.value); setNickState(null); }} />
-              <button className="btn ghost" onClick={checkNick} disabled={nick.length < 2}>중복확인</button>
+              <button className={BTN_SIDE} onClick={checkNick} disabled={nick.length < 2}>중복확인</button>
             </div>
-            {nickState === "ok" && <div className="field-state ok"><Icon.Check /> 사용 가능한 닉네임이에요</div>}
-            {nickState === "dup" && <div className="field-state err"><Icon.X /> 이미 사용 중이에요</div>}
+            {nickState === "ok" && <div className="text-xs mt-1.5 flex items-center gap-1 text-primary"><Icon.Check /> 사용 가능한 닉네임이에요</div>}
+            {nickState === "dup" && <div className="text-xs mt-1.5 flex items-center gap-1 text-destructive"><Icon.X /> 이미 사용 중이에요</div>}
           </div>
 
           {/* 이메일 */}
-          <div className="auth-field">
-            <div className="label">이메일</div>
-            <div className="verify-row">
-              <input className="field-input" type="email" placeholder="you@example.com"
+          <div className="mt-5">
+            <label className={LABEL}>이메일</label>
+            <div className="flex gap-2 items-stretch">
+              <input className={`${INPUT_BASE} flex-1`} type="email" placeholder="you@example.com"
                 value={email} onChange={(e) => setEmail(e.target.value)} />
-              <button className="btn primary" onClick={sendCode} disabled={!email.includes("@")}>
+              <button className={BTN_SIDE} onClick={sendCode} disabled={!email.includes("@")}>
                 {codeSent ? "재발송" : "코드 발송"}
               </button>
             </div>
-            {codeSent && <div className="field-state muted">이메일로 6자리 코드를 보냈어요</div>}
+            {codeSent && <div className="text-xs mt-1.5 flex items-center gap-1 text-muted-foreground">이메일로 6자리 코드를 보냈어요</div>}
           </div>
 
           {/* 인증 코드 */}
           {codeSent && (
-            <div className="auth-field">
-              <div className="label">인증 코드</div>
-              <div className="verify-row">
-                <input className="field-input code-input" placeholder="______" maxLength={6}
-                  value={code} disabled={verified}
-                  onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ""))} />
-                {!verified && <span className="field-suffix">{mmss}</span>}
-                <button className="btn ghost" onClick={verifyCode} disabled={code.length !== 6 || verified}>확인</button>
+            <div className="mt-5">
+              <label className={LABEL}>인증 코드</label>
+              <div className="flex gap-2 items-stretch">
+                <div className="relative flex-1">
+                  <input
+                    className={`${INPUT_BASE} tracking-[0.4em] text-center text-lg font-semibold font-mono`}
+                    placeholder="______" maxLength={6}
+                    value={code} disabled={verified}
+                    onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ""))} />
+                  {!verified && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">{mmss}</span>}
+                </div>
+                <button className={BTN_SIDE} onClick={verifyCode} disabled={code.length !== 6 || verified}>확인</button>
               </div>
-              {verified && <div className="field-state ok"><Icon.Check /> 이메일 인증 완료</div>}
-              {!verified && seconds === 0 && <div className="field-state err">코드가 만료됐어요. 재발송해주세요</div>}
+              {verified && <div className="text-xs mt-1.5 flex items-center gap-1 text-primary"><Icon.Check /> 이메일 인증 완료</div>}
+              {!verified && seconds === 0 && <div className="text-xs mt-1.5 flex items-center gap-1 text-destructive">코드가 만료됐어요. 재발송해주세요</div>}
             </div>
           )}
 
           {/* 비밀번호 */}
-          <div className="auth-field">
-            <div className="label">비밀번호</div>
-            <input className="field-input" type="password" placeholder="••••••••••"
+          <div className="mt-5">
+            <label className={LABEL}>비밀번호</label>
+            <input className={INPUT_BASE} type="password" placeholder="••••••••••"
               value={pw} onChange={(e) => setPw(e.target.value)} />
-            <div className={`auth-rule ${pwMet ? "met" : ""}`}>
-              {pwMet ? <Icon.Check /> : <span style={{ width: 13, textAlign: "center" }}>·</span>}
+            <div className={`text-xs mt-1.5 flex items-center gap-1 ${pwMet ? "text-primary" : "text-muted-foreground"}`}>
+              {pwMet ? <Icon.Check /> : <span className="w-[13px] text-center">·</span>}
               영문 대·소문자 + 특수문자 포함 8–20자
             </div>
           </div>
 
           {/* 주소 */}
-          <div className="auth-field">
-            <div className="label">주소</div>
-            <div className="verify-row">
-              <input className="field-input" placeholder="도로명 주소 검색" value={road}
-                readOnly onClick={() => setAddrOpen(true)} style={{ cursor: "pointer" }} />
-              <button className="btn ghost" onClick={() => setAddrOpen(true)}>주소 검색</button>
+          <div className="mt-5">
+            <label className={LABEL}>주소</label>
+            <div className="flex gap-2 items-stretch">
+              <input className={`${INPUT_BASE} flex-1 cursor-pointer`} placeholder="도로명 주소 검색" value={road}
+                readOnly onClick={() => setAddrOpen(true)} />
+              <button className={BTN_SIDE} onClick={() => setAddrOpen(true)}>주소 검색</button>
             </div>
-            <input ref={detailRef} className="field-input" placeholder="상세주소 (선택)" style={{ marginTop: 8 }}
+            <input ref={detailRef} className={`${INPUT_BASE} mt-2`} placeholder="상세주소 (선택)"
               value={detailAddr} onChange={(e) => setDetailAddr(e.target.value)} />
           </div>
 
           <FormError>{error}</FormError>
 
-          <button className="btn primary lg" style={{ width: "100%", marginTop: 6 }} onClick={submit} disabled={!canSubmit}>
-            {busy ? "가입 중…" : canSubmit ? "가입 완료" : "필수 항목을 모두 입력해주세요"}
-          </button>
+          <div className="mt-6">
+            <button className={BTN_PRIMARY} onClick={submit} disabled={!canSubmit}>
+              {busy ? "가입 중…" : canSubmit ? "가입 완료" : "필수 항목을 모두 입력해주세요"}
+            </button>
+          </div>
 
-          <div className="auth-guest" onClick={() => router.push("/login")}>이미 계정이 있으신가요? 로그인 →</div>
+          <div className="mt-6 text-center text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer" onClick={() => router.push("/login")}>
+            이미 계정이 있으신가요? 로그인 →
+          </div>
         </div>
       </div>
 
