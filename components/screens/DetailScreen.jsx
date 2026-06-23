@@ -29,6 +29,7 @@ export default function DetailScreen({ foodId }) {
   const [toast, setToast] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
   const [chatBusy, setChatBusy] = useState(false);
+  const [myRequest, setMyRequest] = useState(null); // { requestId, status } | null
 
   const load = useCallback(() => {
     let alive = true;
@@ -55,6 +56,20 @@ export default function DetailScreen({ foodId }) {
       .catch(() => { if (alive) setIsOwner(false); });
     return () => { alive = false; };
   }, [user, d]);
+
+  // 내 신청 상태 조회 (신청자 뷰에서 취소 버튼 표시용)
+  useEffect(() => {
+    if (!user || !d || isOwner) { setMyRequest(null); return; }
+    let alive = true;
+    API.requests.mySent()
+      .then((res) => {
+        const list = Array.isArray(res) ? res : (res && res.content) || [];
+        const found = list.find((r) => r.foodId === d.foodId);
+        if (alive) setMyRequest(found ? { requestId: found.requestId, status: found.status } : null);
+      })
+      .catch(() => { if (alive) setMyRequest(null); });
+    return () => { alive = false; };
+  }, [user, d, isOwner]);
 
   const images = (d && d.images) || [];
 
@@ -116,7 +131,8 @@ export default function DetailScreen({ foodId }) {
   const submitRequest = () => {
     setReqError(null);
     API.requests.create(d.foodId)
-      .then(() => {
+      .then((res) => {
+        if (res && res.requestId) setMyRequest({ requestId: res.requestId, status: "REQUEST" });
         setRequestSent(true);
         setTimeout(() => { setRequestModal(false); load(); }, 1300);
       })
@@ -233,11 +249,32 @@ export default function DetailScreen({ foodId }) {
                     if (!user) { router.push("/login"); return; }
                     setReqError(null); setRequestSent(false); setRequestModal(true);
                   }}
-                  disabled={!!user && (d.statusTx !== "IN_PROGRESS" || full)}
+                  disabled={!!user && (d.statusTx !== "IN_PROGRESS" || full || (myRequest && myRequest.status === "REQUEST"))}
                 >
-                  {!user ? "로그인하고 요청하기" : d.statusTx !== "IN_PROGRESS" ? "요청할 수 없는 상태예요" : full ? "정원이 다 찼어요" : "나눔 요청 보내기"}
+                  {!user
+                    ? "로그인하고 요청하기"
+                    : myRequest && myRequest.status === "REQUEST"
+                    ? "요청을 보냈어요"
+                    : d.statusTx !== "IN_PROGRESS"
+                    ? "요청할 수 없는 상태예요"
+                    : full
+                    ? "정원이 다 찼어요"
+                    : "나눔 요청 보내기"}
                 </button>
               </div>
+              {myRequest && myRequest.status === "REQUEST" && (
+                <button
+                  className="link-cancel"
+                  onClick={() => {
+                    if (!confirm("요청을 취소할까요?")) return;
+                    API.requests.cancel(d.foodId, myRequest.requestId)
+                      .then(() => { setMyRequest(null); load(); })
+                      .catch((e) => alert(e.message || "취소에 실패했어요."));
+                  }}
+                >
+                  요청 취소하기
+                </button>
+              )}
               <div className="cta-hint">본인이 등록한 물품과 중복 요청은 보낼 수 없어요.</div>
             </>
           )}
@@ -326,8 +363,10 @@ function OwnerRequests({ foodId, onChange }) {
   useEffect(() => load(), [load]);
 
   const act = (requestId, kind) => {
-    const fn = kind === "approve" ? API.requests.approve : API.requests.reject;
-    fn(requestId)
+    const fn = kind === "approve"
+      ? () => API.requests.approve(foodId, requestId)
+      : () => API.requests.reject(foodId, requestId);
+    fn()
       .then(() => { load(); onChange && onChange(); })
       .catch((e) => alert(e.message || "처리에 실패했어요."));
   };
