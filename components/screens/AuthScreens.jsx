@@ -3,13 +3,12 @@
 /* AuthScreens.jsx — 로그인 / 회원가입
    manus 참고 디자인(Login.tsx / Register.tsx) 그대로 포팅 + 실제 API 연결.
    - 로그인: 중앙 카드 (이메일/비밀번호)
-   - 회원가입: 3단계 위저드 (이메일 인증 → 코드 확인 → 정보 입력) */
+   - 회원가입: 3단계 위저드 (이메일 인증 → 코드 확인 → 정보 입력), 코드 6칸 OTP */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogIn, Mail, ArrowRight, CheckCircle2, Search } from "lucide-react";
+import { Eye, EyeOff, LogIn, Mail, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
-import AddressSearch from "@/components/AddressSearch";
 import API from "@/lib/api";
 
 const LOGO =
@@ -17,6 +16,9 @@ const LOGO =
 
 const INPUT =
   "w-full h-11 rounded-xl border border-border bg-card px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber transition";
+
+const AMBER_BTN =
+  "w-full h-12 inline-flex items-center justify-center gap-2 bg-amber text-white hover:bg-amber-dark shadow-warm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:pointer-events-none";
 
 function CardLogo() {
   return (
@@ -33,6 +35,43 @@ function Spinner() {
   return <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />;
 }
 
+/* 6칸 인증 코드 입력 (manus InputOTP 룩) */
+function OtpBoxes({ value, onChange }) {
+  const refs = useRef([]);
+  const setDigit = (i, v) => {
+    const digit = v.replace(/\D/g, "").slice(-1);
+    const arr = value.padEnd(6, " ").split("");
+    arr[i] = digit || " ";
+    const next = arr.join("").replace(/\s+$/g, "").replace(/\s/g, "").slice(0, 6);
+    onChange(next);
+    if (digit && i < 5) refs.current[i + 1]?.focus();
+  };
+  const onKey = (i, e) => {
+    if (e.key === "Backspace" && !value[i] && i > 0) refs.current[i - 1]?.focus();
+  };
+  const onPaste = (e) => {
+    const txt = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+    if (txt) { e.preventDefault(); onChange(txt); refs.current[Math.min(txt.length, 5)]?.focus(); }
+  };
+  return (
+    <div className="flex justify-center gap-2">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <input
+          key={i}
+          ref={(el) => (refs.current[i] = el)}
+          inputMode="numeric"
+          maxLength={1}
+          value={value[i] || ""}
+          onChange={(e) => setDigit(i, e.target.value)}
+          onKeyDown={(e) => onKey(i, e)}
+          onPaste={onPaste}
+          className="w-11 h-12 rounded-lg border border-border bg-card text-center text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber transition"
+        />
+      ))}
+    </div>
+  );
+}
+
 /* ============ 로그인 ============ */
 export function LoginScreen() {
   const router = useRouter();
@@ -46,6 +85,7 @@ export function LoginScreen() {
   const submit = async (e) => {
     if (e) e.preventDefault();
     if (loading) return;
+    if (!email || !pw) { setError("이메일과 비밀번호를 입력해주세요."); return; }
     setError(null);
     setLoading(true);
     try {
@@ -60,12 +100,9 @@ export function LoginScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-16">
+    <div className="min-h-[calc(100vh-4rem)] bg-cream flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md animate-fade-in-up">
-        <div
-          className="bg-card rounded-3xl p-8 md:p-10 border border-border"
-          style={{ boxShadow: "0 8px 40px oklch(0.70 0.16 55 / 0.12)" }}
-        >
+        <div className="bg-card rounded-3xl p-8 md:p-10 border border-border" style={{ boxShadow: "0 8px 40px oklch(0.70 0.16 55 / 0.12)" }}>
           <CardLogo />
           <h1 className="text-2xl font-extrabold text-foreground text-center mb-1">로그인</h1>
           <p className="text-muted-foreground text-center text-sm mb-8">따뜻한 나눔에 함께해요</p>
@@ -91,8 +128,7 @@ export function LoginScreen() {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <button type="submit" disabled={loading || !email || !pw}
-              className="w-full h-12 inline-flex items-center justify-center gap-2 bg-amber text-white hover:bg-amber-dark shadow-warm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:pointer-events-none">
+            <button type="submit" disabled={loading} className={AMBER_BTN}>
               {loading ? <><Spinner /> 로그인 중...</> : <><LogIn className="w-4 h-4" /> 로그인</>}
             </button>
           </form>
@@ -119,13 +155,10 @@ export function SignupScreen() {
   const [seconds, setSeconds] = useState(0);
 
   const [nick, setNick] = useState("");
-  const [nickState, setNickState] = useState(null); // ok | dup
   const [pw, setPw] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [road, setRoad] = useState("");
   const [detailAddr, setDetailAddr] = useState("");
-  const [addrOpen, setAddrOpen] = useState(false);
-  const detailRef = useRef(null);
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -138,18 +171,8 @@ export function SignupScreen() {
 
   const mmss = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
-  const handleAddress = useCallback((data) => {
-    const building = data.buildingName && data.buildingName !== "N" ? ` (${data.buildingName})` : "";
-    const r = data.roadAddress || data.autoRoadAddress || data.jibunAddress || "";
-    setRoad(r + building);
-    setTimeout(() => detailRef.current && detailRef.current.focus(), 50);
-  }, []);
-
   const handleSendCode = async () => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("올바른 이메일을 입력해주세요.");
-      return;
-    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("올바른 이메일을 입력해주세요."); return; }
     setError(null);
     setLoading(true);
     try {
@@ -170,12 +193,8 @@ export function SignupScreen() {
     setLoading(true);
     try {
       const d = await API.auth.verifyEmailCode(email, otp);
-      if (d && d.verified) {
-        setEmailVerifyToken(d.emailVerifyToken || null);
-        setStep("register");
-      } else {
-        setError("인증 코드가 일치하지 않아요.");
-      }
+      if (d && d.verified) { setEmailVerifyToken(d.emailVerifyToken || null); setStep("register"); }
+      else setError("인증 코드가 일치하지 않아요.");
     } catch (err) {
       const map = { CODE_MISMATCH: "인증 코드가 일치하지 않아요.", CODE_EXPIRED: "코드가 만료됐어요. 재발송해주세요." };
       setError(map[err.code] || err.message || "인증에 실패했어요.");
@@ -184,33 +203,25 @@ export function SignupScreen() {
     }
   };
 
-  const checkNick = async () => {
-    setError(null);
-    try {
-      const d = await API.members.checkNickname(nick);
-      setNickState(d && d.available ? "ok" : "dup");
-    } catch (err) {
-      setNickState(null);
-      setError(err.message || "닉네임 확인에 실패했어요.");
-    }
-  };
-
   const pwMet = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,20}$/.test(pw);
 
   const onSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (nickState !== "ok") { setError("닉네임 중복확인을 해주세요."); return; }
+    if (nick.trim().length < 2 || nick.trim().length > 10) { setError("닉네임은 2~10자여야 해요."); return; }
     if (!pwMet) { setError("비밀번호는 영문 대·소문자와 특수문자를 포함해 8–20자여야 해요."); return; }
-    if (!road) { setError("주소를 입력해주세요."); return; }
+    if (!road.trim()) { setError("도로명 주소를 입력해주세요."); return; }
     setError(null);
     setLoading(true);
     try {
+      // 닉네임 중복 확인 (백엔드 요구)
+      const chk = await API.members.checkNickname(nick.trim()).catch(() => null);
+      if (chk && chk.available === false) { setError("이미 사용 중인 닉네임이에요."); setLoading(false); return; }
       await API.members.signup({
         email,
         emailVerifyToken,
         password: pw,
-        nickName: nick,
-        address: { roadAddress: road, detailAddress: detailAddr },
+        nickName: nick.trim(),
+        address: { roadAddress: road.trim(), detailAddress: detailAddr.trim() },
       });
       router.push("/login");
     } catch (err) {
@@ -234,12 +245,9 @@ export function SignupScreen() {
   const currentStepIdx = steps.findIndex((s) => s.key === step);
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center px-4 pt-16 pb-10">
+    <div className="min-h-[calc(100vh-4rem)] bg-cream flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md animate-fade-in-up">
-        <div
-          className="bg-card rounded-3xl p-8 md:p-10 border border-border"
-          style={{ boxShadow: "0 8px 40px oklch(0.70 0.16 55 / 0.12)" }}
-        >
+        <div className="bg-card rounded-3xl p-8 md:p-10 border border-border" style={{ boxShadow: "0 8px 40px oklch(0.70 0.16 55 / 0.12)" }}>
           <CardLogo />
           <h1 className="text-2xl font-extrabold text-foreground text-center mb-1">회원가입</h1>
           <p className="text-muted-foreground text-center text-sm mb-6">따뜻한 나눔 커뮤니티에 오신 것을 환영합니다</p>
@@ -276,14 +284,13 @@ export function SignupScreen() {
                 <p className="text-xs text-muted-foreground">인증 코드가 이 이메일로 발송됩니다.</p>
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <button onClick={handleSendCode} disabled={loading}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 bg-amber text-white hover:bg-amber-dark shadow-warm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:pointer-events-none">
+              <button onClick={handleSendCode} disabled={loading} className={AMBER_BTN}>
                 {loading ? <Spinner /> : <Mail className="w-4 h-4" />} 인증 코드 발송
               </button>
             </div>
           )}
 
-          {/* Step 2: Verify */}
+          {/* Step 2: Verify (6칸 OTP) */}
           {step === "verify" && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-amber/10 rounded-xl p-4 text-center">
@@ -293,21 +300,17 @@ export function SignupScreen() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">인증 코드</label>
-                <input inputMode="numeric" maxLength={6} placeholder="------"
-                  className={`${INPUT} text-center text-lg font-bold tracking-[0.5em]`}
-                  value={otp} onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))} />
+                <OtpBoxes value={otp} onChange={setOtp} />
                 <p className="text-xs text-muted-foreground text-center">유효시간: {mmss}</p>
               </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <button onClick={handleVerify} disabled={loading || otp.length !== 6}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 bg-amber text-white hover:bg-amber-dark shadow-warm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:pointer-events-none">
+              {error && <p className="text-sm text-destructive text-center">{error}</p>}
+              <button onClick={handleVerify} disabled={loading || otp.length !== 6} className={AMBER_BTN}>
                 {loading ? <Spinner /> : <ArrowRight className="w-4 h-4" />} 인증 확인
               </button>
-              <div className="flex items-center justify-center gap-4 text-sm">
-                <button className="text-muted-foreground hover:text-amber transition-colors"
-                  onClick={() => { setStep("email"); setOtp(""); setError(null); }}>이메일 다시 입력</button>
-                <button className="text-muted-foreground hover:text-amber transition-colors" onClick={handleSendCode}>코드 재발송</button>
-              </div>
+              <button className="w-full text-sm text-muted-foreground hover:text-amber transition-colors"
+                onClick={() => { setStep("email"); setOtp(""); setError(null); }}>
+                이메일 다시 입력하기
+              </button>
             </div>
           )}
 
@@ -321,15 +324,8 @@ export function SignupScreen() {
 
               <div className="space-y-1.5">
                 <label htmlFor="nick" className="text-sm font-medium text-foreground">닉네임 <span className="text-destructive">*</span></label>
-                <div className="flex gap-2">
-                  <input id="nick" placeholder="2~10자 닉네임"
-                    className={`${INPUT} flex-1 ${nickState === "dup" ? "border-destructive" : nickState === "ok" ? "border-primary" : ""}`}
-                    value={nick} onChange={(e) => { setNick(e.target.value); setNickState(null); }} />
-                  <button type="button" onClick={checkNick} disabled={nick.length < 2}
-                    className="h-11 px-4 whitespace-nowrap inline-flex items-center justify-center rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50">중복확인</button>
-                </div>
-                {nickState === "ok" && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> 사용 가능한 닉네임이에요</p>}
-                {nickState === "dup" && <p className="text-xs text-destructive">이미 사용 중인 닉네임이에요</p>}
+                <input id="nick" placeholder="2~10자 닉네임" className={INPUT}
+                  value={nick} onChange={(e) => setNick(e.target.value)} />
               </div>
 
               <div className="space-y-1.5">
@@ -343,33 +339,23 @@ export function SignupScreen() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className={`text-xs flex items-center gap-1 ${pwMet ? "text-primary" : "text-muted-foreground"}`}>
-                  {pwMet && <CheckCircle2 className="w-3.5 h-3.5" />} 영문 대·소문자 + 특수문자 포함 8–20자
-                </p>
               </div>
 
               <div className="space-y-1.5">
                 <label htmlFor="road" className="text-sm font-medium text-foreground">도로명 주소 <span className="text-destructive">*</span></label>
-                <div className="flex gap-2">
-                  <input id="road" placeholder="주소 검색을 눌러주세요" readOnly value={road}
-                    onClick={() => setAddrOpen(true)} className={`${INPUT} flex-1 cursor-pointer`} />
-                  <button type="button" onClick={() => setAddrOpen(true)}
-                    className="h-11 px-4 whitespace-nowrap inline-flex items-center justify-center gap-1 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors">
-                    <Search className="w-3.5 h-3.5" /> 검색
-                  </button>
-                </div>
+                <input id="road" placeholder="서울시 마포구 ..." className={INPUT}
+                  value={road} onChange={(e) => setRoad(e.target.value)} />
               </div>
 
               <div className="space-y-1.5">
                 <label htmlFor="detail" className="text-sm font-medium text-foreground">상세 주소 <span className="text-muted-foreground text-xs">(선택)</span></label>
-                <input id="detail" ref={detailRef} placeholder="101동 202호" className={INPUT}
+                <input id="detail" placeholder="101동 202호" className={INPUT}
                   value={detailAddr} onChange={(e) => setDetailAddr(e.target.value)} />
               </div>
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <button type="submit" disabled={loading}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 bg-amber text-white hover:bg-amber-dark shadow-warm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:pointer-events-none">
+              <button type="submit" disabled={loading} className={AMBER_BTN}>
                 {loading ? <Spinner /> : "가입 완료"}
               </button>
             </form>
@@ -383,8 +369,6 @@ export function SignupScreen() {
           </div>
         </div>
       </div>
-
-      <AddressSearch open={addrOpen} onClose={() => setAddrOpen(false)} onComplete={handleAddress} />
     </div>
   );
 }

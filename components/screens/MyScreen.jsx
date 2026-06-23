@@ -1,85 +1,70 @@
 "use client";
 
-/* MyScreen.jsx — D-08 마이페이지 (실제 API)
-   GET    /members/me                  프로필
-   PATCH  /members/me                  정보 수정(닉네임/주소)
-   DELETE /members/me                  회원 탈퇴
-   POST   /auth/logout                 로그아웃
-   DELETE /foods/{foodId}              내 물품 삭제
-   PATCH  /foods/{foodId}              내 물품 수정
-   GET    /members/me/foods            내가 등록한 물품 목록
-   GET    /members/me/requests         내가 보낸 요청 목록
-   DELETE /foods/{foodId}/requests/{requestId}  요청 취소 */
+/* MyScreen.jsx — 마이페이지(내 정보 / 내 등록 물품 / 내 신청 물품)
+   manus 참고 디자인(Profile.tsx) 그대로 포팅 + 실제 API 연결.
+   좌측 사이드바(내정보·내 등록 물품·내 신청 물품·로그아웃) + 우측 콘텐츠. */
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Icon from "@/components/icons";
-import { Photo, StatusBadge, Avatar, StateBox } from "@/components/ui";
+import { User, Package, FileText, LogOut, Edit2, Trash2, Plus, Minus, X, Search } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import AddressSearch from "@/components/AddressSearch";
 import API from "@/lib/api";
 
-const MY_FILTERS = [
-  { id: "ALL", label: "전체" },
-  { id: "IN_PROGRESS", label: "진행중" },
-  { id: "COMPLETED", label: "완료" },
-  { id: "DONE", label: "만료/미완료" },
-];
-
-const REQUEST_STATUS_LABEL = {
-  REQUEST: "대기중",
-  APPROVED: "수락됨",
-  REJECTED: "거절됨",
-  CANCELLED: "취소됨",
-};
-
-const PRIMARY_BTN =
-  "inline-flex items-center justify-center gap-2 h-11 px-6 rounded-full bg-amber text-white font-semibold shadow-warm hover:bg-amber-dark transition-colors disabled:opacity-50";
-const GHOST_BTN =
-  "inline-flex items-center justify-center gap-1.5 rounded-full bg-card border border-border text-foreground/80 font-medium hover:border-amber hover:text-amber transition-colors";
-const DANGER_GHOST_BTN =
-  "inline-flex items-center justify-center gap-1.5 rounded-full bg-card border border-border text-destructive font-medium hover:border-destructive hover:text-destructive transition-colors";
-const SM_BTN = "h-9 px-4 text-sm";
 const INPUT =
-  "w-full h-12 px-4 rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber transition";
-const FIELD_LABEL = "block text-sm font-semibold text-foreground mb-2";
+  "w-full h-11 rounded-xl border border-border bg-card px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber transition";
+const STATUS_LABELS = { IN_PROGRESS: "나눔중", COMPLETED: "나눔완료", INCOMPLETE: "나눔취소", EXPIRED: "기간만료" };
+const REQ_LABELS = { REQUEST: "대기중", APPROVED: "승인됨", REJECTED: "거절됨", CANCELLED: "취소됨" };
 
-function requestStatusBadgeClass(status) {
-  if (status === "APPROVED") return "badge-in-progress";
-  if (status === "REQUEST") return "badge-completed";
-  return "badge-incomplete";
+function daysUntil(dateStr) {
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const e = new Date(dateStr); e.setHours(0, 0, 0, 0);
+  return Math.ceil((e - t) / 86400000);
+}
+function fmtDate(s) {
+  if (!s) return "-";
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
 }
 
 export default function MyScreen() {
   const router = useRouter();
   const { user, loading: authLoading, setUser, refresh } = useAuth();
+  const [tab, setTab] = useState("profile"); // profile | foods | requests
   const [profile, setProfile] = useState(null);
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("ALL");
   const [editOpen, setEditOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("foods"); // "foods" | "requests"
-  const [editFoodTarget, setEditFoodTarget] = useState(null); // food object to edit
+  const [editFoodTarget, setEditFoodTarget] = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.replace("/login"); return; }
     let alive = true;
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     Promise.all([API.members.me(), API.foods.myFoods().catch(() => [])])
       .then(([me, res]) => {
         if (!alive) return;
         setProfile(me);
-        const list = Array.isArray(res) ? res : (res && res.content) || [];
-        setFoods(list);
+        setFoods(Array.isArray(res) ? res : (res && res.content) || []);
       })
       .catch((e) => { if (alive) setError(e); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [authLoading, user, router]);
 
+  const logout = async () => {
+    try { await API.auth.logout(); } catch {}
+    setUser(null);
+    router.push("/login");
+  };
+  const withdraw = async () => {
+    if (!window.confirm("정말 탈퇴하시겠어요? 탈퇴한 이메일은 재가입할 수 없어요.")) return;
+    try { await API.members.remove(); } catch {}
+    setUser(null);
+    router.push("/login");
+  };
   const removeFood = (foodId) => {
     if (!window.confirm("이 물품을 삭제할까요?")) return;
     API.foods.remove(foodId)
@@ -87,205 +72,157 @@ export default function MyScreen() {
       .catch((e) => alert(e.message || "삭제에 실패했어요."));
   };
 
-  const logout = async () => {
-    try { await API.auth.logout(); } catch {}
-    setUser(null);
-    router.push("/login");
-  };
-
-  const withdraw = async () => {
-    if (!window.confirm("정말 탈퇴하시겠어요? 탈퇴한 이메일은 재가입할 수 없어요.")) return;
-    try { await API.members.remove(); } catch {}
-    setUser(null);
-    router.push("/login");
-  };
-
   if (authLoading || (user && loading)) {
-    return (
-      <div className="container py-10">
-        <StateBox kind="loading" title="내 정보를 불러오는 중…" />
-      </div>
-    );
+    return <div className="min-h-[calc(100vh-4rem)] bg-background grid place-items-center"><Spinner size={30} /></div>;
   }
   if (!user) return null;
-  if (error) {
-    return (
-      <div className="container py-10">
-        <StateBox kind="error" title="내 정보를 불러오지 못했어요"
-          sub={`서버에 연결할 수 없습니다. (${error.code || error.status || error.message || "네트워크 오류"})`}
-          onRetry={() => router.refresh()} />
-      </div>
-    );
-  }
 
   const p = profile || user;
-  const total = foods.length;
-  const activeCount = foods.filter((f) => f.statusTx === "IN_PROGRESS").length;
-  const completedCount = foods.filter((f) => f.statusTx === "COMPLETED").length;
-
-  const filtered = foods.filter((f) => {
-    if (filter === "ALL") return true;
-    if (filter === "DONE") return f.statusTx === "EXPIRED" || f.statusTx === "INCOMPLETE";
-    return f.statusTx === filter;
-  });
+  const navItem = (key, icon, label) => (
+    <button onClick={() => setTab(key)}
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${
+        tab === key ? "bg-amber text-white shadow-warm" : "bg-card text-foreground hover:bg-muted border border-border"}`}>
+      {icon} {label}
+    </button>
+  );
 
   return (
-    <div className="container py-8 lg:py-10 animate-fade-in-up">
-      <div className="mb-6">
-        <div className="text-xs font-bold tracking-widest text-primary">MY PAGE</div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 lg:gap-7">
-        {/* ============ Sidebar ============ */}
-        <aside className="lg:sticky lg:top-20 self-start flex flex-col gap-4">
-          <div className="bg-card rounded-2xl border border-border shadow-warm p-5">
-            <div className="flex gap-3 items-center">
-              <Avatar name={p.nickName} size={44} />
-              <div className="min-w-0">
-                <div className="font-bold text-foreground truncate">{p.nickName}</div>
-                <div className="text-sm text-muted-foreground truncate">{p.email}</div>
-              </div>
-            </div>
-            <div className="mt-5 grid grid-cols-3 divide-x divide-border">
-              <div className="flex flex-col items-center gap-0.5">
-                <b className="text-lg font-bold text-primary">{total}</b>
-                <span className="text-xs text-muted-foreground">등록</span>
-              </div>
-              <div className="flex flex-col items-center gap-0.5">
-                <b className="text-lg font-bold text-primary">{activeCount}</b>
-                <span className="text-xs text-muted-foreground">진행중</span>
-              </div>
-              <div className="flex flex-col items-center gap-0.5">
-                <b className="text-lg font-bold text-primary">{completedCount}</b>
-                <span className="text-xs text-muted-foreground">완료</span>
-              </div>
-            </div>
+    <div className="min-h-[calc(100vh-4rem)] bg-background">
+      <div className="container py-8">
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Sidebar */}
+          <div className="flex md:flex-col gap-2 md:w-52 md:flex-shrink-0 overflow-x-auto md:overflow-visible">
+            {navItem("profile", <User className="w-5 h-5" />, "내정보")}
+            {navItem("foods", <Package className="w-5 h-5" />, "내 등록 물품")}
+            {navItem("requests", <FileText className="w-5 h-5" />, "내 신청 물품")}
+            <button onClick={logout}
+              className="md:mt-auto flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium border border-destructive text-destructive hover:bg-destructive/10 transition-colors whitespace-nowrap">
+              <LogOut className="w-4 h-4" /> 로그아웃
+            </button>
           </div>
 
-          <nav className="bg-card rounded-2xl border border-border shadow-warm p-2 flex flex-col gap-0.5">
-            <MenuItem icon={<Icon.Users />} label="내가 등록한 물품" active={activeTab === "foods"} onClick={() => setActiveTab("foods")} />
-            <MenuItem icon={<Icon.ArrowRight />} label="보낸 요청" active={activeTab === "requests"} onClick={() => setActiveTab("requests")} />
-            <MenuItem icon={<Icon.Chat />} label="채팅 목록" onClick={() => router.push("/chat")} />
-            <MenuItem icon={<Icon.Pencil />} label="정보 수정" onClick={() => setEditOpen(true)} />
-            <div className="my-1 h-px bg-border" />
-            <MenuItem icon={<Icon.ArrowRight />} label="로그아웃" onClick={logout} />
-            <MenuItem icon={<Icon.Trash />} label="회원 탈퇴" danger onClick={withdraw} />
-          </nav>
-        </aside>
-
-        {/* ============ Main ============ */}
-        <div>
-          {activeTab === "foods" ? (
-            <>
-              <div className="flex flex-wrap items-end justify-between gap-2 mb-4">
-                <h1 className="text-2xl font-bold text-foreground">내가 등록한 물품</h1>
-                <div className="text-sm text-muted-foreground">총 {total}건 · 진행중 {activeCount}건</div>
-              </div>
-
-              <div className="flex gap-5 border-b border-border overflow-x-auto mb-5">
-                {MY_FILTERS.map((f) => {
-                  const on = filter === f.id;
-                  return (
-                    <button
-                      key={f.id}
-                      onClick={() => setFilter(f.id)}
-                      className={`whitespace-nowrap pb-2.5 text-sm font-semibold transition-colors ${on ? "text-foreground border-b-2 border-primary -mb-px" : "text-muted-foreground hover:text-foreground"}`}
-                    >
-                      {f.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {filtered.map((f) => (
-                  <div key={f.foodId} className="flex gap-3 sm:gap-4 items-center bg-card rounded-2xl border border-border shadow-warm p-3">
-                    <Photo
-                      label="나눔마켓"
-                      src={f.thumbnailUrl || undefined}
-                      ratio="1/1"
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex-shrink-0 overflow-hidden"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-foreground truncate">{f.foodName}</div>
-                      <div className="text-sm text-muted-foreground mt-0.5">소비기한 {f.expired}</div>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                        <StatusBadge status={f.statusTx} />
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
-                          {f.approvedCount}/{f.capacity}명
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-row sm:flex-col gap-1.5 flex-shrink-0">
-                      <button className={`${GHOST_BTN} ${SM_BTN}`} onClick={() => router.push(`/foods/${f.foodId}`)}>보기</button>
-                      {f.statusTx === "IN_PROGRESS" && (
-                        <button className={`${GHOST_BTN} ${SM_BTN}`} onClick={() => setEditFoodTarget(f)}>수정</button>
-                      )}
-                      {(f.statusTx === "IN_PROGRESS" || f.statusTx === "EXPIRED") && (
-                        <button className={`${DANGER_GHOST_BTN} ${SM_BTN}`} onClick={() => removeFood(f.foodId)}>삭제</button>
-                      )}
-                    </div>
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            {error ? (
+              <div className="bg-card rounded-2xl p-12 text-center border border-border text-muted-foreground">내 정보를 불러오지 못했어요</div>
+            ) : tab === "profile" ? (
+              <div className="bg-card rounded-2xl p-6 shadow-warm border border-border animate-fade-in">
+                <div className="flex flex-col items-center text-center pb-4 border-b border-border">
+                  <div className="w-16 h-16 rounded-full bg-amber text-white grid place-items-center text-2xl font-bold mb-3">
+                    {(p.nickName || "U").charAt(0).toUpperCase()}
                   </div>
-                ))}
-                {filtered.length === 0 && (
-                  <div className="py-16 text-center text-sm text-muted-foreground">
-                    {total === 0 ? (
-                      <>
-                        아직 등록한 물품이 없어요
-                        <div className="mt-4">
-                          <button className={`${PRIMARY_BTN} h-9 px-4 text-sm`} onClick={() => router.push("/register")}>나눔 등록하기</button>
+                  <h1 className="text-xl font-bold text-foreground">{p.nickName}</h1>
+                  <p className="text-sm text-muted-foreground mt-1">{p.email}</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-5">
+                  <Info label="닉네임" value={p.nickName} />
+                  <Info label="이메일" value={p.email} />
+                  <Info label="가입일" value={fmtDate(p.createdAt)} />
+                </div>
+                {p.address && p.address.roadAddress && (
+                  <div className="pb-5"><Info label="주소" value={`${p.address.roadAddress}${p.address.detailAddress ? " " + p.address.detailAddress : ""}`} /></div>
+                )}
+                <div className="flex gap-2">
+                  <button onClick={() => setEditOpen(true)}
+                    className="flex-1 h-11 inline-flex items-center justify-center gap-2 bg-amber text-white hover:bg-amber-dark rounded-xl text-sm font-semibold transition-colors">
+                    <Edit2 className="w-3.5 h-3.5" /> 프로필 수정
+                  </button>
+                  <button onClick={withdraw}
+                    className="flex-1 h-11 inline-flex items-center justify-center gap-2 border border-destructive text-destructive hover:bg-destructive/10 rounded-xl text-sm font-semibold transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" /> 회원 탈퇴
+                  </button>
+                </div>
+              </div>
+            ) : tab === "foods" ? (
+              <div className="space-y-6 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-foreground">내 등록 물품</h2>
+                  <button onClick={() => router.push("/register")}
+                    className="h-10 px-4 inline-flex items-center gap-1.5 bg-amber text-white hover:bg-amber-dark rounded-xl text-sm font-semibold shadow-warm transition-colors">
+                    <Package className="w-4 h-4" /> 새 물품 등록
+                  </button>
+                </div>
+                {foods.length === 0 ? (
+                  <div className="bg-card rounded-2xl p-12 text-center border border-border">
+                    <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <p className="text-muted-foreground mb-4">등록한 물품이 없습니다</p>
+                    <button onClick={() => router.push("/register")} className="h-10 px-5 bg-amber text-white rounded-xl text-sm font-semibold hover:bg-amber-dark">물품 등록하기</button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {foods.map((food) => {
+                      const d = daysUntil(food.expired);
+                      return (
+                        <div key={food.foodId} className="bg-card rounded-2xl p-4 sm:p-6 border border-border hover:shadow-warm transition-shadow">
+                          <div className="flex gap-4 sm:gap-6">
+                            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                              {food.thumbnailUrl ? <img src={food.thumbnailUrl} alt={food.foodName} className="w-full h-full object-cover" />
+                                : <div className="w-full h-full grid place-items-center text-3xl">🍱</div>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-2 line-clamp-2">{food.foodName}</h3>
+                              <div className="space-y-1 text-sm text-muted-foreground mb-4">
+                                <p>소비기한: <span className="font-semibold text-foreground">{d <= 0 ? "만료" : `D-${d}`}</span></p>
+                                <p>신청 현황: <span className="font-semibold text-foreground">{food.approvedCount} / {food.capacity}명</span></p>
+                                <p>상태: <span className="font-semibold text-amber">{STATUS_LABELS[food.statusTx] || food.statusTx}</span></p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <button onClick={() => router.push(`/foods/${food.foodId}`)}
+                                  className="h-9 px-3 inline-flex items-center gap-1 border border-border bg-card text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">보기</button>
+                                {food.statusTx === "IN_PROGRESS" && (
+                                  <button onClick={() => setEditFoodTarget(food)}
+                                    className="h-9 px-3 inline-flex items-center gap-1 bg-amber text-white rounded-lg text-sm font-medium hover:bg-amber-dark transition-colors">
+                                    <Edit2 className="w-4 h-4" /> 수정
+                                  </button>
+                                )}
+                                {(food.statusTx === "IN_PROGRESS" || food.statusTx === "EXPIRED") && (
+                                  <button onClick={() => removeFood(food.foodId)}
+                                    className="h-9 px-3 inline-flex items-center gap-1 border border-destructive text-destructive rounded-lg text-sm font-medium hover:bg-destructive/10 transition-colors">
+                                    <Trash2 className="w-4 h-4" /> 삭제
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </>
-                    ) : "해당하는 물품이 없어요"}
+                      );
+                    })}
                   </div>
                 )}
               </div>
-            </>
-          ) : (
-            <MySentRequests />
-          )}
+            ) : (
+              <MySentRequests />
+            )}
+          </div>
         </div>
       </div>
 
       {editOpen && (
-        <EditProfileModal
-          profile={p}
-          onClose={() => setEditOpen(false)}
-          onSaved={async () => { setEditOpen(false); const me = await API.members.me().catch(() => null); if (me) setProfile(me); refresh && refresh(); }}
-        />
+        <EditProfileModal profile={p} onClose={() => setEditOpen(false)}
+          onSaved={async () => { setEditOpen(false); const me = await API.members.me().catch(() => null); if (me) setProfile(me); refresh && refresh(); }} />
       )}
-
       {editFoodTarget && (
-        <EditFoodModal
-          food={editFoodTarget}
-          onClose={() => setEditFoodTarget(null)}
-          onSaved={(updated) => {
-            setFoods((prev) => prev.map((f) => f.foodId === updated.foodId ? { ...f, ...updated } : f));
-            setEditFoodTarget(null);
-          }}
-        />
+        <EditFoodModal food={editFoodTarget} onClose={() => setEditFoodTarget(null)}
+          onSaved={(updated) => { setFoods((prev) => prev.map((f) => f.foodId === updated.foodId ? { ...f, ...updated } : f)); setEditFoodTarget(null); }} />
       )}
     </div>
   );
 }
 
-/* ============ 사이드바 메뉴 아이템 ============ */
-function MenuItem({ icon, label, active, danger, onClick }) {
-  const base = "flex items-center gap-2.5 w-full text-left px-3 h-11 rounded-xl text-sm font-medium transition-colors";
-  const tone = active
-    ? "bg-amber/10 text-amber font-semibold"
-    : danger
-    ? "text-destructive hover:bg-muted"
-    : "text-foreground/80 hover:bg-muted";
+function Info({ label, value }) {
   return (
-    <button className={`${base} ${tone}`} onClick={onClick}>
-      <span className="grid place-items-center w-5 h-5">{icon}</span>
-      {label}
-    </button>
+    <div>
+      <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{label}</p>
+      <p className="text-sm font-semibold text-foreground mt-1 break-words">{value}</p>
+    </div>
   );
 }
 
-/* ============ 보낸 요청 목록 ============ */
+function Spinner({ size = 28 }) {
+  return <span className="border-2 border-amber/30 border-t-amber rounded-full animate-spin" style={{ width: size, height: size }} />;
+}
+
+/* ============ 내 신청 물품 ============ */
 function MySentRequests() {
   const router = useRouter();
   const [list, setList] = useState(null);
@@ -297,7 +234,6 @@ function MySentRequests() {
       .then((res) => setList(Array.isArray(res) ? res : (res && res.content) || []))
       .catch((e) => { setErr(e); setList([]); });
   }, []);
-
   useEffect(() => load(), [load]);
 
   const cancel = (foodId, requestId) => {
@@ -307,55 +243,68 @@ function MySentRequests() {
       .catch((e) => alert(e.message || "취소에 실패했어요."));
   };
 
-  return (
-    <>
-      <div className="flex flex-wrap items-end justify-between gap-2 mb-5">
-        <h1 className="text-2xl font-bold text-foreground">보낸 요청</h1>
-        {list && <div className="text-sm text-muted-foreground">총 {list.length}건</div>}
-      </div>
+  const badgeCls = (s) =>
+    s === "APPROVED" ? "bg-blue-100 text-blue-700" :
+    s === "REQUEST" ? "bg-yellow-100 text-yellow-700" :
+    "bg-red-100 text-red-700";
 
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <h2 className="text-2xl font-bold text-foreground">내 신청 물품</h2>
       {list === null ? (
-        <StateBox kind="loading" title="요청 목록을 불러오는 중…" />
+        <div className="py-16 grid place-items-center"><Spinner /></div>
       ) : err ? (
-        <StateBox kind="error" title="요청 목록을 불러오지 못했어요" onRetry={load} />
+        <div className="bg-card rounded-2xl p-12 text-center border border-border text-muted-foreground">신청 목록을 불러오지 못했어요</div>
       ) : list.length === 0 ? (
-        <div className="py-16 text-center text-sm text-muted-foreground">
-          보낸 요청이 없어요
+        <div className="bg-card rounded-2xl p-12 text-center border border-border">
+          <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <p className="text-muted-foreground">신청한 물품이 없습니다</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="space-y-4">
           {list.map((r) => (
-            <div key={r.requestId} className="flex gap-3 sm:gap-4 items-center bg-card rounded-2xl border border-border shadow-warm p-3">
-              <Photo
-                label="나눔마켓"
-                src={r.thumbnailUrl || undefined}
-                ratio="1/1"
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex-shrink-0 overflow-hidden"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-foreground truncate">{r.foodName || "물품"}</div>
-                {r.ownerNickName && <div className="text-sm text-muted-foreground mt-0.5">등록자 {r.ownerNickName}</div>}
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${requestStatusBadgeClass(r.status)}`}>
-                    {REQUEST_STATUS_LABEL[r.status] || r.status}
-                  </span>
+            <div key={r.requestId} className="bg-card rounded-2xl p-6 border border-border hover:shadow-warm transition-shadow">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold text-foreground truncate cursor-pointer hover:text-amber" onClick={() => router.push(`/foods/${r.foodId}`)}>
+                    {r.foodName || "물품"}
+                  </h3>
+                  {r.ownerNickName && <p className="text-sm text-muted-foreground mt-1">등록자: {r.ownerNickName}</p>}
                 </div>
+                <span className={`text-xs font-bold px-4 py-2 rounded-full flex-shrink-0 ${badgeCls(r.status)}`}>
+                  {r.status === "APPROVED" ? "✓ 승인됨" : r.status === "REQUEST" ? "⏳ 대기중" : `✕ ${REQ_LABELS[r.status] || r.status}`}
+                </span>
               </div>
-              <div className="flex flex-row sm:flex-col gap-1.5 flex-shrink-0">
-                <button className={`${GHOST_BTN} ${SM_BTN}`} onClick={() => router.push(`/foods/${r.foodId}`)}>보기</button>
-                {r.status === "REQUEST" && (
-                  <button className={`${DANGER_GHOST_BTN} ${SM_BTN}`} onClick={() => cancel(r.foodId, r.requestId)}>취소</button>
-                )}
-              </div>
+              <p className="text-sm text-foreground mb-4">
+                {r.status === "REQUEST" && "아직 나눔자의 응답을 기다리고 있습니다."}
+                {r.status === "APPROVED" && "나눔자가 승인했습니다. 채팅으로 연락하세요."}
+                {r.status === "REJECTED" && "죄송하지만 나눔자가 거절했습니다."}
+              </p>
+              {r.status === "REQUEST" && (
+                <button onClick={() => cancel(r.foodId, r.requestId)}
+                  className="h-9 px-3 inline-flex items-center border border-destructive text-destructive rounded-lg text-sm font-medium hover:bg-destructive/10 transition-colors">신청 취소</button>
+              )}
             </div>
           ))}
         </div>
       )}
-    </>
+    </div>
   );
 }
 
-/* ============ 음식 수정 모달 (PATCH /foods/{foodId}) ============ */
+/* ============ 모달 ============ */
+function ModalShell({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm grid place-items-center p-4" onClick={onClose}>
+      <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-warm-lg p-6 relative" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 grid place-items-center rounded-lg text-muted-foreground hover:bg-muted"><X className="w-4 h-4" /></button>
+        <h2 className="text-xl font-bold text-foreground mb-5">{title}</h2>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function EditFoodModal({ food, onClose, onSaved }) {
   const [foodName, setFoodName] = useState(food.foodName || "");
   const [capacity, setCapacity] = useState(food.capacity || 3);
@@ -371,8 +320,7 @@ function EditFoodModal({ food, onClose, onSaved }) {
   }, [food.foodId]);
 
   const save = async () => {
-    setBusy(true);
-    setError(null);
+    setBusy(true); setError(null);
     try {
       const body = {};
       if (foodName.trim() !== food.foodName) body.foodName = foodName.trim();
@@ -383,52 +331,39 @@ function EditFoodModal({ food, onClose, onSaved }) {
     } catch (e) {
       const map = { VALIDATION_FAILED: "입력값을 확인해주세요.", FOOD_NOT_FOUND: "존재하지 않는 물품이에요." };
       setError(map[e.code] || e.message || "수정에 실패했어요.");
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-foreground/45 backdrop-blur-sm grid place-items-center p-4" onClick={onClose}>
-      <div className="w-full max-w-md bg-card rounded-2xl shadow-warm-lg p-6 relative" onClick={(e) => e.stopPropagation()}>
-        <button className="absolute top-4 right-4 w-8 h-8 grid place-items-center rounded-lg text-muted-foreground hover:bg-muted" onClick={onClose} aria-label="닫기"><Icon.X /></button>
-        <div className="text-xs font-bold tracking-widest text-primary">EDIT FOOD</div>
-        <h2 className="text-xl font-bold text-foreground mt-1 mb-4">물품 수정</h2>
-
-        <label className={FIELD_LABEL}>물품 이름</label>
-        <input className={INPUT} value={foodName} onChange={(e) => setFoodName(e.target.value)} maxLength={30} />
-
-        <div className="flex items-center justify-between mt-4 mb-2">
-          <span className="text-sm font-semibold text-foreground">정원 수</span>
-          <span className="text-xs text-muted-foreground">최대 10명</span>
+    <ModalShell title="물품 수정" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">물품 이름</label>
+          <input className={INPUT} value={foodName} maxLength={30} onChange={(e) => setFoodName(e.target.value)} />
         </div>
-        <div className="flex items-center gap-3 py-1">
-          <button className="w-9 h-9 grid place-items-center rounded-lg bg-card border border-border text-foreground hover:border-amber hover:text-amber transition-colors" onClick={() => setCapacity((c) => Math.max(1, c - 1))} aria-label="감소"><Icon.Minus /></button>
-          <span className="min-w-[60px] text-center text-xl font-bold text-foreground">{capacity}명</span>
-          <button className="w-9 h-9 grid place-items-center rounded-lg bg-card border border-border text-foreground hover:border-amber hover:text-amber transition-colors" onClick={() => setCapacity((c) => Math.min(10, c + 1))} aria-label="증가"><Icon.Plus /></button>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">나눔 인원</label>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setCapacity((c) => Math.max(1, c - 1))} className="w-9 h-9 rounded-lg border border-border grid place-items-center hover:border-amber hover:text-amber"><Minus className="w-4 h-4" /></button>
+            <span className="min-w-[3rem] text-center text-lg font-bold">{capacity}명</span>
+            <button onClick={() => setCapacity((c) => Math.min(10, c + 1))} className="w-9 h-9 rounded-lg border border-border grid place-items-center hover:border-amber hover:text-amber"><Plus className="w-4 h-4" /></button>
+          </div>
         </div>
-
-        <label className={`${FIELD_LABEL} mt-4`}>상세 내용</label>
-        {!detailsLoaded ? (
-          <div className="py-5 text-center text-xs text-muted-foreground">불러오는 중…</div>
-        ) : (
-          <textarea className={`${INPUT} h-auto min-h-[120px] py-3 resize-y`} value={details} onChange={(e) => setDetails(e.target.value)} maxLength={500} rows={4} />
-        )}
-
-        {error && (
-          <div className="mt-3.5 px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>
-        )}
-
-        <div className="flex gap-2 mt-5">
-          <button className={`${GHOST_BTN} h-11 px-6 flex-1`} onClick={onClose}>취소</button>
-          <button className={`${PRIMARY_BTN} flex-[2]`} onClick={save} disabled={busy || !foodName.trim()}>{busy ? "저장 중…" : "저장하기"}</button>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">상세 내용</label>
+          {!detailsLoaded ? <p className="text-sm text-muted-foreground py-3 text-center">불러오는 중…</p>
+            : <textarea className={`${INPUT} h-auto py-3 resize-none`} rows={4} maxLength={500} value={details} onChange={(e) => setDetails(e.target.value)} />}
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="flex gap-2 pt-2">
+          <button onClick={onClose} className="flex-1 h-11 rounded-xl border border-border bg-card font-medium hover:bg-muted">취소</button>
+          <button onClick={save} disabled={busy || !foodName.trim()} className="flex-[2] h-11 rounded-xl bg-amber text-white font-semibold hover:bg-amber-dark disabled:opacity-50">{busy ? "저장 중…" : "저장하기"}</button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
-/* ============ 정보 수정 모달 (PATCH /members/me) ============ */
 function EditProfileModal({ profile, onClose, onSaved }) {
   const [nick, setNick] = useState(profile.nickName || "");
   const [road, setRoad] = useState((profile.address && profile.address.roadAddress) || "");
@@ -438,8 +373,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
   const [error, setError] = useState(null);
 
   const save = async () => {
-    setBusy(true);
-    setError(null);
+    setBusy(true); setError(null);
     try {
       const body = {};
       if (nick && nick !== profile.nickName) body.nickName = nick;
@@ -449,42 +383,37 @@ function EditProfileModal({ profile, onClose, onSaved }) {
     } catch (e) {
       const map = { NICKNAME_DUPLICATED: "이미 사용 중인 닉네임이에요.", VALIDATION_FAILED: "입력값을 확인해주세요. (닉네임 2~10자)" };
       setError(map[e.code] || e.message || "수정에 실패했어요.");
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-foreground/45 backdrop-blur-sm grid place-items-center p-4" onClick={onClose}>
-      <div className="w-full max-w-md bg-card rounded-2xl shadow-warm-lg p-6 relative" onClick={(e) => e.stopPropagation()}>
-        <button className="absolute top-4 right-4 w-8 h-8 grid place-items-center rounded-lg text-muted-foreground hover:bg-muted" onClick={onClose} aria-label="닫기"><Icon.X /></button>
-        <div className="text-xs font-bold tracking-widest text-primary">EDIT PROFILE</div>
-        <h2 className="text-xl font-bold text-foreground mt-1 mb-4">정보 수정</h2>
-
-        <label className={FIELD_LABEL}>닉네임 <span className="font-normal text-muted-foreground">2–10자</span></label>
-        <input className={INPUT} value={nick} onChange={(e) => setNick(e.target.value)} maxLength={10} />
-
-        <label className={`${FIELD_LABEL} mt-4`}>주소</label>
-        <div className="flex gap-2">
-          <input className={`${INPUT} cursor-pointer`} value={road} readOnly onClick={() => setAddrOpen(true)} placeholder="도로명 주소 검색" />
-          <button className={`${GHOST_BTN} h-12 px-4 whitespace-nowrap`} onClick={() => setAddrOpen(true)}>주소 검색</button>
+    <ModalShell title="프로필 수정" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">닉네임 <span className="text-muted-foreground text-xs">2–10자</span></label>
+          <input className={INPUT} value={nick} maxLength={10} onChange={(e) => setNick(e.target.value)} />
         </div>
-        <input className={`${INPUT} mt-2`} value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="상세주소 (선택)" />
-
-        {error && (
-          <div className="mt-3.5 px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>
-        )}
-
-        <div className="flex gap-2 mt-5">
-          <button className={`${GHOST_BTN} h-11 px-6 flex-1`} onClick={onClose}>취소</button>
-          <button className={`${PRIMARY_BTN} flex-[2]`} onClick={save} disabled={busy}>{busy ? "저장 중…" : "저장하기"}</button>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">도로명 주소</label>
+          <div className="flex gap-2">
+            <input className={`${INPUT} flex-1 cursor-pointer`} value={road} readOnly onClick={() => setAddrOpen(true)} placeholder="주소 검색" />
+            <button onClick={() => setAddrOpen(true)} className="h-11 px-4 inline-flex items-center gap-1 rounded-xl border border-border bg-card text-sm font-medium hover:bg-muted"><Search className="w-3.5 h-3.5" /> 검색</button>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">상세 주소 <span className="text-muted-foreground text-xs">(선택)</span></label>
+          <input className={INPUT} value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="101동 202호" />
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="flex gap-2 pt-2">
+          <button onClick={onClose} className="flex-1 h-11 rounded-xl border border-border bg-card font-medium hover:bg-muted">취소</button>
+          <button onClick={save} disabled={busy} className="flex-[2] h-11 rounded-xl bg-amber text-white font-semibold hover:bg-amber-dark disabled:opacity-50">{busy ? "저장 중…" : "저장하기"}</button>
         </div>
       </div>
-
       <AddressSearch open={addrOpen} onClose={() => setAddrOpen(false)} onComplete={(data) => {
         const building = data.buildingName && data.buildingName !== "N" ? ` (${data.buildingName})` : "";
         setRoad((data.roadAddress || data.jibunAddress || "") + building);
       }} />
-    </div>
+    </ModalShell>
   );
 }
