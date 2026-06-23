@@ -11,10 +11,36 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Icon from "@/components/icons";
-import { StatusBadge, Photo, Avatar, CapacityBar, StateBox, Spinner } from "@/components/ui";
+import {
+  Calendar, Users, ChevronLeft, ChevronRight, X, Check,
+  MessageSquare, ShieldCheck,
+} from "lucide-react";
+import { Photo, Avatar, StateBox, Spinner } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
 import API from "@/lib/api";
+
+const STATUS_META = {
+  IN_PROGRESS: { label: "나눔중", cls: "badge-in-progress" },
+  COMPLETED: { label: "나눔완료", cls: "badge-completed" },
+  INCOMPLETE: { label: "나눔취소", cls: "badge-incomplete" },
+  EXPIRED: { label: "기간만료", cls: "badge-expired" },
+};
+
+function formatDate(d) {
+  if (!d) return "";
+  const dt = new Date(d);
+  if (isNaN(dt)) return String(d);
+  return dt.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function formatDateTime(d) {
+  if (!d) return "";
+  const dt = new Date(d);
+  if (isNaN(dt)) return String(d);
+  return dt.toLocaleDateString("ko-KR", {
+    year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
 
 export default function DetailScreen({ foodId }) {
   const router = useRouter();
@@ -96,27 +122,35 @@ export default function DetailScreen({ foodId }) {
 
   if (loading) {
     return (
-      <div className="detail">
-        <div className="detail-crumb">
-          <button className="crumb-back" onClick={() => router.push("/")}><Icon.ChevronLeft /> 홈으로</button>
+      <div className="min-h-screen bg-background pt-20">
+        <div className="container py-8">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+            <button className="inline-flex items-center gap-1 hover:text-amber transition-colors" onClick={() => router.push("/")}>
+              <ChevronLeft className="w-4 h-4" /> 홈으로
+            </button>
+          </div>
+          <StateBox kind="loading" title="물품 정보를 불러오는 중…" />
         </div>
-        <StateBox kind="loading" title="물품 정보를 불러오는 중…" />
       </div>
     );
   }
   if (error || !d) {
     const notFound = error && error.status === 404;
     return (
-      <div className="detail">
-        <div className="detail-crumb">
-          <button className="crumb-back" onClick={() => router.push("/")}><Icon.ChevronLeft /> 홈으로</button>
+      <div className="min-h-screen bg-background pt-20">
+        <div className="container py-8">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+            <button className="inline-flex items-center gap-1 hover:text-amber transition-colors" onClick={() => router.push("/")}>
+              <ChevronLeft className="w-4 h-4" /> 홈으로
+            </button>
+          </div>
+          <StateBox
+            kind="error"
+            title={notFound ? "존재하지 않는 물품이에요" : "물품 정보를 불러오지 못했어요"}
+            sub={notFound ? "삭제되었거나 잘못된 주소일 수 있어요." : `서버에 연결할 수 없습니다. (${(error && (error.code || error.status || error.message)) || "네트워크 오류"})`}
+            onRetry={notFound ? undefined : load}
+          />
         </div>
-        <StateBox
-          kind="error"
-          title={notFound ? "존재하지 않는 물품이에요" : "물품 정보를 불러오지 못했어요"}
-          sub={notFound ? "삭제되었거나 잘못된 주소일 수 있어요." : `서버에 연결할 수 없습니다. (${(error && (error.code || error.status || error.message)) || "네트워크 오류"})`}
-          onRetry={notFound ? undefined : load}
-        />
       </div>
     );
   }
@@ -127,6 +161,8 @@ export default function DetailScreen({ foodId }) {
   const curUrl = cur && cur.accessUrl;
   const isExpImage = cur && cur.imageType === "EXPIRED";
   const full = d.approvedCount >= d.capacity;
+  const status = STATUS_META[d.statusTx] || { label: d.statusTx, cls: "badge-in-progress" };
+  const pct = d.capacity ? Math.min(100, (d.approvedCount / d.capacity) * 100) : 0;
 
   const submitRequest = () => {
     setReqError(null);
@@ -163,88 +199,143 @@ export default function DetailScreen({ foodId }) {
   };
 
   return (
-    <div className="detail">
-      <div className="detail-crumb">
-        <button className="crumb-back" onClick={() => router.push("/")}><Icon.ChevronLeft /> 홈으로</button>
-        <span className="crumb-sep">/</span>
-        <span style={{ color: "var(--ink)" }}>{d.foodName}</span>
-      </div>
-
-      <div className="detail-grid">
-        {/* ============ Left: image carousel ============ */}
-        <div className="detail-left">
-          <div className="carousel">
-            <Photo label="나눔마켓" src={curUrl} />
-            <div className="carousel-tl"><StatusBadge status={d.statusTx} solid /></div>
-            {isExpImage && (
-              <div className="carousel-tr exp-tag"><Icon.Calendar /> 소비기한 인증 사진</div>
-            )}
-            {images.length > 0 && (
-              <div className="carousel-counter">
-                <span className="font-en">{photoIdx + 1}</span><span>/</span><span className="font-en">{images.length}</span>
-              </div>
-            )}
-            {images.length > 1 && (
-              <>
-                <button className="carousel-arrow left" onClick={prev} aria-label="이전"><Icon.ChevronLeft /></button>
-                <button className="carousel-arrow right" onClick={next} aria-label="다음"><Icon.ChevronRight /></button>
-              </>
-            )}
-          </div>
-
-          {images.length > 1 && (
-            <div className="carousel-thumbs">
-              {images.map((img, i) => (
-                <button key={img.imageId ?? i} className={`thumb ${i === photoIdx ? "on" : ""}`} onClick={() => setPhotoIdx(i)}>
-                  <Photo label="" src={img.accessUrl} ratio="1/1" />
-                  {img.imageType === "EXPIRED" && <div className="thumb-star">⭐</div>}
-                </button>
-              ))}
-            </div>
-          )}
+    <div className="min-h-screen bg-background pt-20">
+      <div className="container py-8">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+          <button className="inline-flex items-center gap-1 hover:text-amber transition-colors" onClick={() => router.push("/")}>
+            물품 목록
+          </button>
+          <span>/</span>
+          <span className="text-foreground font-medium line-clamp-1">{d.foodName}</span>
         </div>
 
-        {/* ============ Right: info ============ */}
-        <div className="detail-right">
-          <div className="detail-owner">
-            <Avatar name={d.ownerNickName || (isOwner ? (user && user.nickName) || "나" : "?")} size={42} />
-            <div style={{ flex: 1 }}>
-              <div className="owner-name">{isOwner ? "내가 등록한 물품" : (d.ownerNickName || "이웃")}</div>
-              <div className="owner-sub">등록자</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 xl:gap-16">
+          {/* ============ Left: image gallery ============ */}
+          <div>
+            {/* Main Image */}
+            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted mb-3 shadow-warm">
+              <Photo label="나눔마켓" src={curUrl} className="w-full h-full" />
+              {isExpImage && (
+                <div className="absolute top-3 right-3">
+                  <span className="inline-flex items-center gap-1 bg-amber/90 text-white text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-sm">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    소비기한 인증
+                  </span>
+                </div>
+              )}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={prev}
+                    aria-label="이전"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={next}
+                    aria-label="다음"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
+              )}
             </div>
+
+            {/* Thumbnails */}
+            {images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {images.map((img, i) => (
+                  <button
+                    key={img.imageId ?? i}
+                    onClick={() => setPhotoIdx(i)}
+                    className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
+                      i === photoIdx
+                        ? "border-amber shadow-warm"
+                        : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <Photo label="" src={img.accessUrl} ratio="1/1" className="w-full h-full" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <h1 className="detail-title" style={{ marginTop: 18 }}>{d.foodName}</h1>
+          {/* ============ Right: info ============ */}
+          <div>
+            {/* Status */}
+            <div className="flex items-start gap-3 mb-4">
+              <span className={`text-sm font-semibold px-3 py-1 rounded-full ${status.cls}`}>
+                {status.label}
+              </span>
+            </div>
 
-          <div className="detail-info">
-            <div className="info-row">
-              <div className="info-label"><Icon.Calendar /> 소비기한</div>
-              <div className="info-value">
-                <span className="font-en exp-date">{d.expired}</span>
-                <span className={`d-pill ${daysLeft <= 14 ? "warn" : ""}`}>{daysLeft < 0 ? `D+${Math.abs(daysLeft)}` : `D-${daysLeft}`}</span>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight mb-4">
+              {d.foodName}
+            </h1>
+
+            {/* Owner */}
+            <div className="flex items-center gap-3 mb-6">
+              <Avatar name={d.ownerNickName || (isOwner ? (user && user.nickName) || "나" : "?")} size={36} />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {isOwner ? "내가 등록한 물품" : (d.ownerNickName || "이웃")}
+                </p>
+                <p className="text-xs text-muted-foreground">{formatDateTime(d.createdAt)} 등록</p>
               </div>
             </div>
-            <div className="info-row">
-              <div className="info-label"><Icon.Users /> 정원</div>
-              <div className="info-value"><CapacityBar approved={d.approvedCount} total={d.capacity} /></div>
+
+            <div className="border-t border-border mb-6" />
+
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-cream rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4 text-amber" />
+                  <span className="text-xs text-muted-foreground font-medium">소비기한</span>
+                </div>
+                <p className="font-semibold text-foreground text-sm">{formatDate(d.expired)}</p>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block ${
+                  daysLeft <= 14 ? "bg-red-100 text-red-700" : "bg-amber/10 text-amber-dark"
+                }`}>
+                  {daysLeft < 0 ? `D+${Math.abs(daysLeft)}` : daysLeft === 0 ? "오늘 만료" : `D-${daysLeft}`}
+                </span>
+              </div>
+
+              <div className="bg-cream rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Users className="w-4 h-4 text-amber" />
+                  <span className="text-xs text-muted-foreground font-medium">나눔 인원</span>
+                </div>
+                <p className="font-semibold text-foreground text-sm">
+                  {d.approvedCount} / {d.capacity}명
+                </p>
+                <div className="w-full h-1.5 bg-muted rounded-full mt-2">
+                  <div className="h-full bg-amber rounded-full transition-all" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="detail-desc">
-            {(d.details || "").split("\n").map((p, i) => <p key={i}>{p}</p>)}
-          </div>
+            {/* Description */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-foreground mb-2">물품 설명</h3>
+              <div className="text-muted-foreground leading-relaxed text-sm bg-cream rounded-xl p-4">
+                {(d.details || "").split("\n").map((p, i) => (
+                  <p key={i} className={i > 0 ? "mt-3" : ""}>{p}</p>
+                ))}
+              </div>
+            </div>
 
-          {/* ============ 등록자: 받은 요청 관리 ============ */}
-          {isOwner ? (
-            <OwnerRequests foodId={d.foodId} onChange={load} />
-          ) : (
-            <>
-              <div className="detail-cta-row">
-                <button className="btn ghost lg" onClick={openChat} disabled={chatBusy}>
-                  <Icon.Chat /> {chatBusy ? "여는 중…" : "채팅하기"}
-                </button>
+            {/* ============ Action area ============ */}
+            {isOwner ? (
+              <OwnerRequests foodId={d.foodId} onChange={load} />
+            ) : (
+              <div className="flex flex-col gap-3">
                 <button
-                  className="btn primary lg cta"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold bg-amber text-white hover:bg-amber-dark shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   onClick={() => {
                     if (!user) { router.push("/login"); return; }
                     setReqError(null); setRequestSent(false); setRequestModal(true);
@@ -261,23 +352,35 @@ export default function DetailScreen({ foodId }) {
                     ? "정원이 다 찼어요"
                     : "나눔 요청 보내기"}
                 </button>
-              </div>
-              {myRequest && myRequest.status === "REQUEST" && (
+
                 <button
-                  className="link-cancel"
-                  onClick={() => {
-                    if (!confirm("요청을 취소할까요?")) return;
-                    API.requests.cancel(d.foodId, myRequest.requestId)
-                      .then(() => { setMyRequest(null); load(); })
-                      .catch((e) => alert(e.message || "취소에 실패했어요."));
-                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold border border-amber text-amber hover:bg-amber/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={openChat}
+                  disabled={chatBusy}
                 >
-                  요청 취소하기
+                  <MessageSquare className="w-4 h-4" /> {chatBusy ? "여는 중…" : "채팅하기"}
                 </button>
-              )}
-              <div className="cta-hint">본인이 등록한 물품과 중복 요청은 보낼 수 없어요.</div>
-            </>
-          )}
+
+                {myRequest && myRequest.status === "REQUEST" && (
+                  <button
+                    className="mx-auto text-xs text-red-500 underline underline-offset-2 hover:text-red-600"
+                    onClick={() => {
+                      if (!confirm("요청을 취소할까요?")) return;
+                      API.requests.cancel(d.foodId, myRequest.requestId)
+                        .then(() => { setMyRequest(null); load(); })
+                        .catch((e) => alert(e.message || "취소에 실패했어요."));
+                    }}
+                  >
+                    요청 취소하기
+                  </button>
+                )}
+
+                <p className="text-center text-xs text-muted-foreground">
+                  본인이 등록한 물품과 중복 요청은 보낼 수 없어요.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -291,59 +394,11 @@ export default function DetailScreen({ foodId }) {
         />
       )}
 
-      {toast && <div className="detail-toast"><Icon.Chat /> {toast}</div>}
-
-      <style>{`
-        .detail { padding: 0 0 40px; }
-        .detail-crumb { display: flex; align-items: center; gap: 8px; padding: 16px 32px; font-size: 12.5px; color: var(--ink-4); }
-        .crumb-back { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-2); font-weight: 500; padding: 4px 8px; margin-left: -8px; border-radius: 6px; }
-        .crumb-back:hover { background: var(--bg-2); }
-        .crumb-sep { color: var(--ink-5); }
-        .detail-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; padding: 0 32px; max-width: 1280px; margin: 0 auto; }
-        .carousel { position: relative; background: var(--surface-2); border-radius: var(--r-img); overflow: hidden; }
-        .carousel .ph { aspect-ratio: 4/3; border-radius: var(--r-img); }
-        .carousel-tl { position: absolute; top: 14px; left: 14px; }
-        .carousel-tr.exp-tag { position: absolute; top: 14px; right: 14px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--accent); color: var(--ink); border-radius: 999px; font-size: 11px; font-weight: 700; }
-        .thumb-star { position: absolute; top: 4px; right: 4px; font-size: 11px; background: var(--accent); width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; }
-        .carousel-counter { position: absolute; bottom: 14px; right: 14px; background: rgba(31,29,24,0.72); color: var(--bg); padding: 4px 10px; border-radius: 999px; font-size: 11.5px; display: inline-flex; gap: 3px; backdrop-filter: blur(6px); }
-        .carousel-counter .font-en { font-family: var(--font-en); font-weight: 600; }
-        .carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.9); color: var(--ink); display: grid; place-items: center; box-shadow: 0 2px 8px rgba(31,29,24,0.12); transition: all 0.12s; }
-        .carousel-arrow:hover { background: #fff; transform: translateY(-50%) scale(1.06); }
-        .carousel-arrow.left { left: 14px; }
-        .carousel-arrow.right { right: 14px; }
-        .carousel-thumbs { display: flex; gap: 8px; margin-top: 10px; }
-        .thumb { position: relative; flex: 1; padding: 0; border-radius: 8px; overflow: hidden; background: transparent; border: 2px solid transparent; transition: all 0.12s; }
-        .thumb .ph { aspect-ratio: 1/1; border-radius: 6px; }
-        .thumb:hover { border-color: var(--line-2); }
-        .thumb.on { border-color: var(--primary); }
-        .detail-right { display: flex; flex-direction: column; }
-        .detail-owner { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
-        .owner-name { font-weight: 700; font-size: 14.5px; }
-        .owner-sub { font-size: 11.5px; color: var(--ink-4); margin-top: 2px; }
-        .region-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--bg-2); border-radius: 999px; font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
-        .detail-title { font-size: 28px; font-weight: 800; line-height: 1.25; letter-spacing: -0.025em; margin-top: 4px; margin-bottom: 16px; }
-        .detail-info { background: var(--bg-2); border-radius: 10px; padding: 14px 18px; margin-bottom: 18px; }
-        .info-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--line-2); }
-        .info-row:last-child { border-bottom: 0; }
-        .info-label { display: inline-flex; align-items: center; gap: 6px; width: 110px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
-        .info-value { flex: 1; font-size: 13.5px; display: flex; align-items: center; gap: 10px; }
-        .exp-date { font-family: var(--font-en); font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
-        .d-pill { font-family: var(--font-en); font-size: 11px; font-weight: 700; padding: 2px 8px; background: var(--primary-100); color: var(--primary-700); border-radius: 999px; letter-spacing: 0.02em; }
-        .d-pill.warn { background: var(--accent-100); color: var(--accent-700); }
-        .detail-desc { font-size: 14px; line-height: 1.7; color: var(--ink-2); margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); min-height: 40px; }
-        .detail-desc p + p { margin-top: 12px; }
-        .detail-cta-row { display: flex; gap: 8px; }
-        .cta { flex: 1; }
-        .cta-hint { text-align: center; font-size: 11.5px; color: var(--ink-4); margin-top: 10px; }
-        .link-cancel { display: block; margin: 10px auto 0; font-size: 12px; color: var(--danger); text-decoration: underline; text-underline-offset: 2px; }
-        .detail-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; background: var(--ink); color: var(--bg); border-radius: 999px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-pop); z-index: 300; animation: toastIn 0.2s ease; }
-        @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 8px); } }
-        @media (max-width: 900px) {
-          .detail-crumb { padding: 12px 16px; }
-          .detail-grid { grid-template-columns: 1fr; gap: 20px; padding: 0 16px; }
-          .detail-title { font-size: 22px; }
-        }
-      `}</style>
+      {toast && (
+        <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[300] inline-flex items-center gap-2 px-4 py-3 rounded-full bg-foreground text-background text-sm font-semibold shadow-lg">
+          <MessageSquare className="w-4 h-4" /> {toast}
+        </div>
+      )}
     </div>
   );
 }
@@ -375,58 +430,68 @@ function OwnerRequests({ foodId, onChange }) {
   const decided = (list || []).filter((r) => r.status !== "REQUEST");
 
   return (
-    <div className="owner-req">
-      <div className="owner-req-head">
-        <b>받은 나눔 요청</b>
-        {list && <span className="num-pill">{pending.length}</span>}
+    <div className="bg-card border border-border rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Users className="w-4 h-4 text-amber" />
+        <b className="text-sm font-semibold text-foreground">받은 나눔 요청</b>
+        {list && (
+          <span className="inline-block px-2 py-0.5 rounded-full bg-amber text-white text-xs font-bold">
+            {pending.length}
+          </span>
+        )}
       </div>
+
       {list === null ? (
-        <div style={{ padding: 24, display: "grid", placeItems: "center" }}><Spinner size={22} /></div>
+        <div className="py-6 grid place-items-center"><Spinner size={22} /></div>
       ) : err ? (
-        <div className="owner-req-empty">요청을 불러오지 못했어요</div>
-      ) : (list.length === 0) ? (
-        <div className="owner-req-empty">아직 받은 요청이 없어요</div>
+        <div className="py-7 text-center text-muted-foreground text-sm">요청을 불러오지 못했어요</div>
+      ) : list.length === 0 ? (
+        <div className="py-7 text-center text-muted-foreground text-sm">아직 받은 요청이 없어요</div>
       ) : (
-        <>
+        <div className="space-y-2">
           {pending.map((r) => (
-            <div className="req-card" key={r.requestFoodId}>
-              <Avatar name={r.requesterNickName || "?"} size={34} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="req-name">{r.requesterNickName || "이웃"}</div>
-                <div className="req-sub">나눔을 요청했어요</div>
+            <div className="flex items-center justify-between bg-cream rounded-xl p-3" key={r.requestFoodId}>
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar name={r.requesterNickName || "?"} size={34} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground line-clamp-1">{r.requesterNickName || "이웃"}</p>
+                  <p className="text-xs text-muted-foreground">나눔을 요청했어요</p>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button className="btn ghost sm" onClick={() => act(r.requestFoodId, "reject")}>거절</button>
-                <button className="btn primary sm" onClick={() => act(r.requestFoodId, "approve")}>수락</button>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-semibold border border-border text-foreground hover:bg-muted transition-colors"
+                  onClick={() => act(r.requestFoodId, "reject")}
+                >
+                  거절
+                </button>
+                <button
+                  className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-semibold bg-amber text-white hover:bg-amber-dark transition-colors"
+                  onClick={() => act(r.requestFoodId, "approve")}
+                >
+                  수락
+                </button>
               </div>
             </div>
           ))}
           {decided.map((r) => (
-            <div className="req-card muted" key={r.requestFoodId}>
-              <Avatar name={r.requesterNickName || "?"} size={34} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="req-name">{r.requesterNickName || "이웃"}</div>
-                <div className="req-sub">{r.status === "APPROVED" ? "수락됨" : "거절됨"}</div>
+            <div className="flex items-center justify-between bg-cream/60 rounded-xl p-3 opacity-80" key={r.requestFoodId}>
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar name={r.requesterNickName || "?"} size={34} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground line-clamp-1">{r.requesterNickName || "이웃"}</p>
+                  <p className="text-xs text-muted-foreground">{r.status === "APPROVED" ? "수락됨" : "거절됨"}</p>
+                </div>
               </div>
-              <span className={`badge ${r.status === "APPROVED" ? "progress" : "incomplete"}`}>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                r.status === "APPROVED" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+              }`}>
                 {r.status === "APPROVED" ? "수락" : "거절"}
               </span>
             </div>
           ))}
-        </>
+        </div>
       )}
-      <style>{`
-        .owner-req { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
-        .owner-req-head { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 10px; }
-        .owner-req-head b { font-weight: 700; }
-        .num-pill { display: inline-block; padding: 1px 7px; background: var(--danger); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; }
-        .owner-req-empty { padding: 28px 0; text-align: center; color: var(--ink-4); font-size: 12.5px; }
-        .req-card { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px dashed var(--line); }
-        .req-card:first-of-type { border-top: 0; }
-        .req-card.muted { opacity: 0.7; }
-        .req-name { font-size: 13px; font-weight: 700; }
-        .req-sub { font-size: 11.5px; color: var(--ink-4); margin-top: 1px; }
-      `}</style>
     </div>
   );
 }
@@ -434,33 +499,40 @@ function OwnerRequests({ foodId, onChange }) {
 /* ============ Request Modal ============ */
 function RequestModal({ food, sent, error, onClose, onSubmit }) {
   return (
-    <div className="modal-scrim" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="닫기"><Icon.X /></button>
+    <div className="fixed inset-0 z-[200] bg-black/50 grid place-items-center p-4" onClick={onClose}>
+      <div className="relative bg-card rounded-2xl p-6 w-full max-w-md shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <button
+          className="absolute top-4 right-4 w-8 h-8 rounded-lg grid place-items-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          onClick={onClose}
+          aria-label="닫기"
+        >
+          <X className="w-5 h-5" />
+        </button>
 
         {!sent ? (
           <>
-            <div className="eyebrow" style={{ color: "var(--primary)" }}>NEW REQUEST</div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 4 }}>나눔 요청 보내기</h2>
-            <p style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 6, marginBottom: 18, lineHeight: 1.6 }}>
-              <b>{food.foodName}</b> 나눔을 요청해요. 등록자가 수락하면 채팅으로 픽업을 조율할 수 있어요.
+            <h2 className="text-xl font-extrabold text-foreground">나눔 요청 보내기</h2>
+            <p className="text-sm text-muted-foreground mt-1.5 mb-4 leading-relaxed">
+              <b className="text-foreground">{food.foodName}</b> 나눔을 요청해요. 등록자가 수락하면 채팅으로 픽업을 조율할 수 있어요.
             </p>
 
-            <div className="modal-summary">
-              <Photo label="나눔마켓" src={(food.images && food.images[0] && food.images[0].accessUrl) || undefined} ratio="1/1" />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700 }}>{food.foodName}</div>
-                <div style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 4 }}>
-                  소비기한 {food.expired} · 정원 {food.approvedCount}/{food.capacity}명
+            <div className="flex gap-3 items-center bg-cream rounded-xl p-3">
+              <div className="w-14 h-14 flex-shrink-0">
+                <Photo label="나눔마켓" src={(food.images && food.images[0] && food.images[0].accessUrl) || undefined} ratio="1/1" className="w-full h-full rounded-lg overflow-hidden" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-foreground line-clamp-1">{food.foodName}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  소비기한 {formatDate(food.expired)} · 정원 {food.approvedCount}/{food.capacity}명
                 </div>
               </div>
             </div>
 
-            <div className="modal-rules">
-              <Icon.Lock style={{ flexShrink: 0, marginTop: 2 }} />
+            <div className="flex gap-3 mt-4 p-3.5 rounded-xl bg-amber/10 text-sm leading-relaxed">
+              <ShieldCheck className="w-5 h-5 text-amber flex-shrink-0 mt-0.5" />
               <div>
-                <b>안내</b>
-                <ul>
+                <b className="block text-foreground text-sm mb-1">안내</b>
+                <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-1">
                   <li>본인이 등록한 물품에는 요청할 수 없어요</li>
                   <li>같은 물품에 중복 요청은 불가합니다</li>
                   <li>진행중 상태인 물품에만 요청할 수 있어요</li>
@@ -469,40 +541,36 @@ function RequestModal({ food, sent, error, onClose, onSubmit }) {
             </div>
 
             {error && (
-              <div style={{ marginTop: 14, padding: "10px 12px", background: "#FBEAE5", border: "1px solid var(--danger-100)", borderRadius: 8, color: "var(--danger)", fontSize: 12.5 }}>
+              <div className="mt-3.5 px-3 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
                 {error}
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-              <button className="btn ghost" style={{ flex: 1 }} onClick={onClose}>취소</button>
-              <button className="btn primary" style={{ flex: 2 }} onClick={onSubmit}>요청 보내기</button>
+            <div className="flex gap-2 mt-4">
+              <button
+                className="flex-1 inline-flex items-center justify-center rounded-xl px-4 py-2.5 font-semibold border border-border text-foreground hover:bg-muted transition-colors"
+                onClick={onClose}
+              >
+                취소
+              </button>
+              <button
+                className="flex-[2] inline-flex items-center justify-center rounded-xl px-4 py-2.5 font-semibold bg-amber text-white hover:bg-amber-dark transition-colors"
+                onClick={onSubmit}
+              >
+                요청 보내기
+              </button>
             </div>
           </>
         ) : (
-          <div style={{ padding: "16px 0", textAlign: "center" }}>
-            <div className="success-check"><Icon.Check /></div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 14 }}>요청을 보냈어요</h2>
-            <p style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 6 }}>등록자가 수락하면 채팅으로 알려드릴게요.</p>
+          <div className="py-4 text-center">
+            <div className="w-16 h-16 mx-auto rounded-full bg-green-500 text-white grid place-items-center">
+              <Check className="w-7 h-7" />
+            </div>
+            <h2 className="text-xl font-extrabold text-foreground mt-3.5">요청을 보냈어요</h2>
+            <p className="text-sm text-muted-foreground mt-1.5">등록자가 수락하면 채팅으로 알려드릴게요.</p>
           </div>
         )}
       </div>
-
-      <style>{`
-        .modal-scrim { position: fixed; inset: 0; background: rgba(31,29,24,0.45); backdrop-filter: blur(2px); z-index: 200; display: grid; place-items: center; padding: 20px; }
-        .modal { width: 100%; max-width: 460px; background: var(--surface); border-radius: 14px; padding: 28px; position: relative; box-shadow: var(--shadow-pop); }
-        .modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-3); }
-        .modal-close:hover { background: var(--bg-2); color: var(--ink); }
-        .modal-summary { display: flex; gap: 12px; align-items: center; padding: 12px; background: var(--bg-2); border-radius: 10px; }
-        .modal-summary .ph { width: 56px; height: 56px; aspect-ratio: 1/1; flex-shrink: 0; }
-        .modal-rules { display: flex; gap: 10px; padding: 12px 14px; background: var(--primary-50); border: 1px solid var(--primary-100); border-radius: 10px; color: var(--primary-700); font-size: 12px; line-height: 1.5; margin-top: 14px; }
-        .modal-rules svg { color: var(--primary); }
-        .modal-rules b { font-weight: 700; display: block; margin-bottom: 4px; color: var(--ink); font-size: 12.5px; }
-        .modal-rules ul { padding-left: 14px; color: var(--ink-3); font-size: 11.5px; }
-        .modal-rules li { list-style: disc; margin-top: 2px; }
-        .success-check { width: 64px; height: 64px; margin: 0 auto; background: var(--primary); color: #FBF9F2; border-radius: 50%; display: grid; place-items: center; }
-        .success-check svg { width: 28px; height: 28px; }
-      `}</style>
     </div>
   );
 }
