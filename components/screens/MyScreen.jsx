@@ -159,6 +159,9 @@ export default function MyScreen() {
   });
 
   return (
+    <>
+    {/* 모달은 아래 Fragment의 형제로 분리한다 — transform이 남는 animate 컨테이너 안에
+       fixed 모달을 두면 오버레이가 뷰포트가 아니라 컨테이너 높이까지만 덮여(아래가 하얗게) 보인다. */}
     <div className="animate-fade-in-up">
       {/* ============ Cream 헤더 밴드 ============ */}
       <div className="bg-cream border-b border-border">
@@ -291,6 +294,7 @@ export default function MyScreen() {
           </div>
         </div>
       </div>
+    </div>
 
       {editOpen && (
         <EditProfileModal
@@ -310,7 +314,7 @@ export default function MyScreen() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -421,14 +425,16 @@ function EditFoodModal({ food, onClose, onSaved }) {
   }, [food.foodId]);
 
   const save = async () => {
+    if (!detailsLoaded) return; // 상세 내용 로딩 완료 후 저장(백엔드 필수 필드)
     setBusy(true);
     setError(null);
     try {
-      const body = {};
-      if (foodName.trim() !== food.foodName) body.foodName = foodName.trim();
-      if (capacity !== food.capacity) body.capacity = capacity;
-      if (detailsLoaded) body.details = details.trim();
-      const updated = await API.foods.update(food.foodId, body);
+      // 백엔드 PATCH /foods 는 foodName · capacity · details 가 전부 필수(multipart)다.
+      const updated = await API.foods.update(food.foodId, {
+        foodName: foodName.trim(),
+        capacity,
+        details: details.trim(),
+      });
       onSaved && onSaved({ ...food, foodName: foodName.trim(), capacity, ...(updated || {}) });
     } catch (e) {
       const map = { VALIDATION_FAILED: "입력값을 확인해주세요.", FOOD_NOT_FOUND: "존재하지 않는 물품이에요." };
@@ -471,7 +477,7 @@ function EditFoodModal({ food, onClose, onSaved }) {
 
         <div className="flex gap-2 mt-5">
           <button className={`${GHOST_BTN} h-11 px-6 flex-1`} onClick={onClose}>취소</button>
-          <button className={`${PRIMARY_BTN} flex-[2]`} onClick={save} disabled={busy || !foodName.trim()}>{busy ? "저장 중…" : "저장하기"}</button>
+          <button className={`${PRIMARY_BTN} flex-[2]`} onClick={save} disabled={busy || !detailsLoaded || !foodName.trim() || !details.trim()}>{busy ? "저장 중…" : "저장하기"}</button>
         </div>
       </div>
     </div>
