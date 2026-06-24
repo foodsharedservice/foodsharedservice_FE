@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FoodShare 와이어프레임</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f0f0; color: #222; }
+
+  /* 네비게이션 */
+  .nav { position: fixed; top: 0; left: 0; right: 0; background: #fff; border-bottom: 2px solid #222; z-index: 100;
+    display: flex; gap: 6px; padding: 10px 20px; flex-wrap: wrap; }
+  .nav a { padding: 6px 12px; background: #eee; border: 1.5px solid #aaa; border-radius: 6px;
+    text-decoration: none; color: #222; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .nav a:hover, .nav a.active { background: #222; color: #fff; border-color: #222; }
+
+  /* 페이지 컨테이너 */
+  .pages { padding-top: 60px; }
+  .page { display: none; max-width: 1200px; margin: 0 auto; padding: 30px 20px 60px; }
+  .page.active { display: block; }
+  .page-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
+
+  /* 와이어프레임 공통 */
+  .wf { background: #fff; border: 2px solid #222; border-radius: 0; }
+  .wf-header { background: #222; color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; }
+  .wf-body { padding: 16px; }
+  .wf-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #888; text-transform: uppercase; margin-bottom: 6px; }
+  .wf-text { font-size: 13px; color: #444; }
+
+  /* 박스 */
+  .box { border: 1.5px solid #999; border-radius: 4px; padding: 10px 14px; margin-bottom: 10px; background: #fafafa; }
+  .box-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .box-sub { font-size: 11px; color: #777; }
+
+  /* 이미지 플레이스홀더 */
+  .img-ph { background: #ddd; border: 1.5px dashed #aaa; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #888; font-weight: 600; }
+  .img-sq { aspect-ratio: 1/1; }
+  .img-43 { aspect-ratio: 4/3; }
+  .img-169 { aspect-ratio: 16/9; }
+
+  /* 버튼 */
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px;
+    border: 2px solid #222; border-radius: 4px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .btn-primary { background: #222; color: #fff; }
+  .btn-ghost { background: #fff; color: #222; }
+  .btn-danger { background: #fff; color: #c00; border-color: #c00; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-lg { padding: 12px 24px; font-size: 14px; }
+  .btn-full { width: 100%; }
+
+  /* 입력 */
+  .input { width: 100%; border: 1.5px solid #999; border-radius: 4px; padding: 9px 12px; font-size: 13px; background: #fafafa; }
+  .textarea { height: 80px; resize: none; }
+  .label { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 4px; margin-top: 12px; }
+
+  /* 배지 */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; border: 1.5px solid; }
+  .badge-green { border-color: #2a7; color: #2a7; background: #f0fff8; }
+  .badge-blue { border-color: #27a; color: #27a; background: #f0f8ff; }
+  .badge-gray { border-color: #aaa; color: #777; background: #f5f5f5; }
+  .badge-red { border-color: #c00; color: #c00; background: #fff0f0; }
+
+  /* 탭 */
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tab { padding: 6px 14px; border: 1.5px solid #ccc; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer; background: #fff; }
+  .tab.on { background: #222; color: #fff; border-color: #222; }
+
+  /* 그리드 */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+  /* 레이아웃 */
+  .sidebar-layout { display: grid; grid-template-columns: 240px 1fr; gap: 24px; }
+  .sidebar { border: 1.5px solid #ccc; border-radius: 4px; padding: 16px; background: #fafafa; }
+  .divider { border: none; border-top: 1px solid #ddd; margin: 10px 0; }
+
+  /* 카드 */
+  .card { border: 1.5px solid #ddd; border-radius: 6px; overflow: hidden; background: #fff; }
+  .card-img { width: 100%; }
+  .card-body { padding: 10px 12px; }
+  .card-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .card-meta { font-size: 11px; color: #888; }
+
+  /* 리스트 행 */
+  .list-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eee; }
+  .list-row:last-child { border-bottom: none; }
+  .list-row-body { flex: 1; min-width: 0; }
+  .list-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  /* 채팅 */
+  .chat-layout { display: grid; grid-template-columns: 280px 1fr; gap: 0; border: 2px solid #222; border-radius: 4px; overflow: hidden; min-height: 500px; }
+  .chat-sidebar { border-right: 2px solid #222; background: #fafafa; }
+  .chat-sidebar-head { padding: 12px 14px; border-bottom: 1.5px solid #ddd; font-size: 13px; font-weight: 700; }
+  .chat-room-item { padding: 12px 14px; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: center; cursor: pointer; }
+  .chat-room-item.on { background: #f0f0f0; }
+  .chat-room-body { flex: 1; min-width: 0; }
+  .chat-room-name { font-size: 12px; font-weight: 700; }
+  .chat-room-last { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-main { display: flex; flex-direction: column; }
+  .chat-main-head { padding: 12px 14px; border-bottom: 1.5px solid #ddd; font-size: 13px; font-weight: 700; background: #fff; }
+  .chat-messages { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: #f8f8f8; }
+  .chat-msg { max-width: 60%; }
+  .chat-msg.mine { align-self: flex-end; }
+  .chat-msg.other { align-self: flex-start; }
+  .chat-bubble { padding: 8px 12px; border-radius: 12px; font-size: 12px; line-height: 1.5; }
+  .chat-msg.mine .chat-bubble { background: #222; color: #fff; border-radius: 12px 12px 2px 12px; }
+  .chat-msg.other .chat-bubble { background: #fff; border: 1.5px solid #ddd; border-radius: 12px 12px 12px 2px; }
+  .chat-msg-name { font-size: 10px; color: #888; margin-bottom: 3px; }
+  .chat-input-row { display: flex; gap: 8px; padding: 12px 14px; border-top: 1.5px solid #ddd; background: #fff; }
+
+  /* 아바타 */
+  .avatar { border-radius: 50%; background: #ddd; border: 1.5px solid #bbb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #666; flex-shrink: 0; }
+
+  /* 모달 */
+  .modal-wrap { border: 2px solid #222; border-radius: 8px; padding: 24px; background: #fff; max-width: 440px; margin: 0 auto; position: relative; }
+  .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; }
+  .modal-close { position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; border: 1.5px solid #ccc; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; }
+
+  /* 앱 헤더 */
+  .app-header { background: #fff; border-bottom: 2px solid #222; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .app-logo { font-size: 16px; font-weight: 900; letter-spacing: -0.02em; }
+  .app-header-nav { display: flex; gap: 8px; }
+
+  /* 알림 */
+  .note { background: #fffbe6; border: 1.5px solid #f0c040; border-radius: 4px; padding: 8px 12px; font-size: 11px; color: #7a5c00; margin-bottom: 12px; }
+
+  /* 섹션 구분 */
+  .section { margin-bottom: 32px; }
+  .section-title { font-size: 14px; font-weight: 800; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #222; }
+
+  /* progress bar */
+  .progress-track { height: 6px; background: #eee; border-radius: 999px; overflow: hidden; margin-top: 4px; }
+  .progress-fill { height: 100%; background: #222; border-radius: 999px; }
+
+  /* annotation */
+  .ann { font-size: 10px; color: #f60; font-weight: 700; margin-top: 4px; }
+
+  @media (max-width: 768px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .sidebar-layout { grid-template-columns: 1fr; }
+    .chat-layout { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 네비게이션 -->
+<nav class="nav">
+  <a href="#" onclick="show('home')" class="active" id="nav-home">🏠 홈</a>
+  <a href="#" onclick="show('detail')" id="nav-detail">📦 음식 상세</a>
+  <a href="#" onclick="show('register')" id="nav-register">✏️ 음식 등록</a>
+  <a href="#" onclick="show('mypage')" id="nav-mypage">👤 마이페이지</a>
+  <a href="#" onclick="show('my-requests')" id="nav-my-requests">📋 보낸 요청</a>
+  <a href="#" onclick="show('chat')" id="nav-chat">💬 채팅</a>
+  <a href="#" onclick="show('login')" id="nav-login">🔐 로그인</a>
+  <a href="#" onclick="show('signup')" id="nav-signup">📝 회원가입</a>
+</nav>
+
+<div class="pages">
+
+  <!-- ========== 홈 ========== -->
+  <div class="page active" id="page-home">
+    <div class="page-title">홈 — GET /foods</div>
+
+    <!-- 앱 헤더 -->
+    <div class="app-header">
+      <div class="app-logo">🥗 FoodShare</div>
+      <div class="app-header-nav">
+        <div class="btn btn-ghost btn-sm">채팅</div>
+        <div class="btn btn-ghost btn-sm">마이페이지</div>
+        <div class="btn btn-primary btn-sm">나눔 등록</div>
+      </div>
+    </div>
+
+    <!-- 필터 + 정렬 -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div class="tabs">
+        <div class="tab on">전체</div>
+        <div class="tab">진행중</div>
+        <div class="tab">완료</div>
+        <div class="tab">만료</div>
+      </div>
+      <select class="input" style="width:120px; margin:0;">
+        <option>최신순</option>
+        <option>소비기한 임박순</option>
+      </select>
+    </div>
+
+    <!-- 음식 카드 그리드 -->
+    <div class="grid-3">
+      <!-- 카드 1 -->
+      <div class="card">
+        <div class="img-ph img-43 card-img" style="height:160px;">📷 음식 이미지</div>
+        <div class="card-body">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+            <div class="card-title">미개봉 시리얼</div>
+            <span class="badge badge-green">진행중</span>
+          </div>
+          <div class="card-meta">소비기한 2026-08-30 · D-67</div>
+          <div class="progress-track" style="margin-top:8px;">
+            <div class="progress-fill" style="width:40%;"></div>
+          </div>
+          <div class="card-meta" style="margin-top:4px;">2/5명 신청</div>
+        </div>
+      </div>
+
+      <!-- 카드 2 -->
+      <div class="card">
+        <div class="img-ph img-43 card-img" style="height:160px;">📷 음식 이미지</div>
+        <div class="card-body">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+            <div class="card-title">통조림 고등어 3캔</div>
+            <span class="badge badge-blue">완료</span>
+          </div>
+          <div class="card-meta">소비기한 2026-12-01 · D-154</div>
+          <div class="progress-track" style="margin-top:8px;">
+            <div class="progress-fill" style="width:100%;"></div>
+          </div>
+          <div class="card-meta" style="margin-top:4px;">3/3명 신청</div>
+        </div>
+      </div>
+
+      <!-- 카드 3 -->
+      <div class="card">
+        <div class="img-ph img-43 card-img" style="height:160px;">📷 음식 이미지</div>
+        <div class="card-body">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+            <div class="card-title">라면 5봉지</div>
+            <span class="badge badge-gray">만료</span>
+          </div>
+          <div class="card-meta">소비기한 2026-06-01 · D+22</div>
+          <div class="progress-track" style="margin-top:8px;">
+            <div class="progress-fill" style="width:20%;"></div>
+          </div>
+          <div class="card-meta" style="margin-top:4px;">1/5명 신청</div>
+        </div>
+      </div>
+
+      <!-- 카드 4~6 placeholder -->
+      <div class="card">
+        <div class="img-ph img-43 card-img" style="height:160px;">📷 음식 이미지</div>
+        <div class="card-body">
+          <div class="card-title" style="color:#bbb;">음식명</div>
+          <div class="card-meta">소비기한 · 신청 현황</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="img-ph img-43 card-img" style="height:160px;">📷 음식 이미지</div>
+        <div class="card-body">
+          <div class="card-title" style="color:#bbb;">음식명</div>
+          <div class="card-meta">소비기한 · 신청 현황</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="img-ph img-43 card-img" style="height:160px;">📷 음식 이미지</div>
+        <div class="card-body">
+          <div class="card-title" style="color:#bbb;">음식명</div>
+          <div class="card-meta">소비기한 · 신청 현황</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:24px;">
+      <div class="btn btn-ghost">더 보기</div>
+    </div>
+  </div>
+
+  <!-- ========== 음식 상세 ========== -->
+  <div class="page" id="page-detail">
+    <div class="page-title">음식 상세 — GET /foods/{foodId}</div>
+
+    <div class="app-header">
+      <div class="app-logo">🥗 FoodShare</div>
+      <div class="app-header-nav">
+        <div class="btn btn-ghost btn-sm">채팅</div>
+        <div class="btn btn-ghost btn-sm">마이페이지</div>
+      </div>
+    </div>
+
+    <!-- breadcrumb -->
+    <div style="font-size:12px; color:#888; margin-bottom:20px;">← 홈으로 / 미개봉 시리얼</div>
+
+    <div class="grid-2">
+      <!-- LEFT: 이미지 캐러셀 -->
+      <div>
+        <div class="img-ph" style="height:320px; border-radius:8px; margin-bottom:10px;">
+          📷 메인 이미지<br/><span style="font-size:10px;">소비기한 인증 사진 ⭐</span>
+        </div>
+        <div class="grid-4">
+          <div class="img-ph img-sq" style="height:60px; border-radius:6px; border:2px solid #222;">⭐</div>
+          <div class="img-ph img-sq" style="height:60px; border-radius:6px;">📷</div>
+          <div class="img-ph img-sq" style="height:60px; border-radius:6px;">📷</div>
+          <div class="img-ph img-sq" style="height:60px; border-radius:6px;">📷</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: 정보 -->
+      <div>
+        <!-- 등록자 -->
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+          <div class="avatar" style="width:40px; height:40px;">이웃</div>
+          <div>
+            <div style="font-size:13px; font-weight:700;">김이웃</div>
+            <div style="font-size:11px; color:#888;">등록자</div>
+          </div>
+        </div>
+
+        <div style="font-size:22px; font-weight:800; margin-bottom:16px;">미개봉 시리얼</div>
+
+        <!-- 정보 테이블 -->
+        <div class="box">
+          <div class="list-row" style="padding:8px 0;">
+            <div style="width:90px; font-size:11px; font-weight:700; color:#888;">📅 소비기한</div>
+            <div style="font-size:14px; font-weight:700;">2026-08-30 <span class="badge badge-green">D-67</span></div>
+          </div>
+          <div class="list-row" style="padding:8px 0;">
+            <div style="width:90px; font-size:11px; font-weight:700; color:#888;">👥 정원</div>
+            <div>
+              <div class="progress-track" style="width:120px; display:inline-block;"><div class="progress-fill" style="width:40%;"></div></div>
+              <span style="font-size:12px; margin-left:8px;">2/5명</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 상세 내용 -->
+        <div style="font-size:13px; color:#555; line-height:1.7; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #eee;">
+          미개봉 제품이에요. 이사로 인해 나눔합니다.<br/>직거래 희망 위치는 강남역 근처입니다.
+        </div>
+
+        <!-- 신청자 뷰: CTA -->
+        <div class="section">
+          <div class="section-title" style="font-size:12px;">신청자 뷰</div>
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <div class="btn btn-ghost btn-lg" style="flex:1;">💬 채팅하기</div>
+            <div class="btn btn-primary btn-lg" style="flex:2;">나눔 요청 보내기</div>
+          </div>
+          <div style="text-align:center; font-size:12px; color:#c00; text-decoration:underline; margin-top:6px; cursor:pointer;">요청 취소하기</div>
+          <div class="ann">이미 요청 보낸 경우: 버튼 비활성 + "요청 취소하기" 링크 표시</div>
+        </div>
+
+        <!-- 등록자 뷰: 받은 요청 -->
+        <div class="section">
+          <div class="section-title" style="font-size:12px;">등록자 뷰 — 받은 요청 목록</div>
+          <div class="box">
+            <div style="font-size:13px; font-weight:700; margin-bottom:10px;">받은 나눔 요청 <span class="badge badge-red">2</span></div>
+            <div class="list-row">
+              <div class="avatar" style="width:32px; height:32px;">A</div>
+              <div class="list-row-body">
+                <div style="font-size:12px; font-weight:700;">홍길동</div>
+                <div style="font-size:11px; color:#888;">나눔을 요청했어요</div>
+              </div>
+              <div class="list-row-actions">
+                <div class="btn btn-ghost btn-sm">거절</div>
+                <div class="btn btn-primary btn-sm">수락</div>
+              </div>
+            </div>
+            <div class="list-row">
+              <div class="avatar" style="width:32px; height:32px;">B</div>
+              <div class="list-row-body">
+                <div style="font-size:12px; font-weight:700;">이순신</div>
+                <div style="font-size:11px; color:#888;">나눔을 요청했어요</div>
+              </div>
+              <div class="list-row-actions">
+                <div class="btn btn-ghost btn-sm">거절</div>
+                <div class="btn btn-primary btn-sm">수락</div>
+              </div>
+            </div>
+            <div class="list-row" style="opacity:0.5;">
+              <div class="avatar" style="width:32px; height:32px;">C</div>
+              <div class="list-row-body">
+                <div style="font-size:12px; font-weight:700;">김철수</div>
+                <div style="font-size:11px; color:#888;">수락됨</div>
+              </div>
+              <span class="badge badge-blue">수락</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 요청 모달 -->
+    <div class="section">
+      <div class="section-title">나눔 요청 모달</div>
+      <div class="modal-wrap">
+        <div class="modal-close">✕</div>
+        <div class="modal-title">나눔 요청 보내기</div>
+        <div class="box" style="margin-bottom:16px;">
+          <div class="box-title">미개봉 시리얼</div>
+          <div class="box-sub">소비기한 2026-08-30 · 2/5명 신청 중</div>
+        </div>
+        <div style="font-size:12px; color:#666; margin-bottom:16px;">요청을 보내면 등록자가 수락/거절할 수 있어요.</div>
+        <div style="display:flex; gap:8px;">
+          <div class="btn btn-ghost" style="flex:1;">취소</div>
+          <div class="btn btn-primary" style="flex:2;">요청 보내기</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 음식 등록 ========== -->
+  <div class="page" id="page-register">
+    <div class="page-title">음식 등록 — POST /foods</div>
+
+    <div class="app-header">
+      <div class="app-logo">🥗 FoodShare</div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+      <div class="btn btn-ghost btn-sm">← 돌아가기</div>
+      <div style="font-size:20px; font-weight:800;">물품 등록</div>
+    </div>
+
+    <div class="grid-2">
+      <!-- LEFT -->
+      <div>
+        <!-- STEP 1 -->
+        <div class="box" style="margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div>
+              <div style="font-size:10px; color:#888; font-weight:700;">STEP 1 · 필수</div>
+              <div style="font-size:15px; font-weight:700;">소비기한 사진</div>
+            </div>
+            <span class="badge badge-blue">✨ AI 자동 인식</span>
+          </div>
+          <div class="img-ph img-43" style="height:180px; border-radius:6px; margin-bottom:12px;">
+            📷 소비기한이 보이게 찍어주세요<br/>
+            <div class="btn btn-primary btn-sm" style="margin-top:10px;">파일 선택</div>
+          </div>
+          <!-- AI 결과 -->
+          <div class="box" style="background:#f8fff8; border-color:#2a7;">
+            <div style="font-size:10px; color:#2a7; font-weight:700; margin-bottom:4px;">AI 인식 결과 🔒</div>
+            <div style="font-size:28px; font-weight:700; font-family:monospace;">2026-08-30</div>
+            <div style="font-size:11px; color:#888; margin-top:4px;">인식이 잘못됐다면 사진을 다시 올려주세요.</div>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="box">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div>
+              <div style="font-size:10px; color:#888; font-weight:700;">STEP 2 · 선택</div>
+              <div style="font-size:15px; font-weight:700;">추가 사진</div>
+            </div>
+            <span style="font-size:12px; color:#888;">2 / 4</span>
+          </div>
+          <div class="grid-4">
+            <div class="img-ph img-sq" style="height:70px;">📷</div>
+            <div class="img-ph img-sq" style="height:70px;">📷</div>
+            <div class="img-ph img-sq" style="height:70px; border-style:dashed;">+ 추가</div>
+            <div class="img-ph img-sq" style="height:70px; border-style:dashed; color:#ddd;">+</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div>
+        <div class="box">
+          <div style="font-size:10px; color:#888; font-weight:700; margin-bottom:4px;">STEP 3 · 필수</div>
+          <div style="font-size:15px; font-weight:700; margin-bottom:16px;">물품 정보</div>
+
+          <div class="label">물품 이름</div>
+          <input class="input" placeholder="예) 미개봉 시리얼" value="미개봉 시리얼" />
+          <div style="text-align:right; font-size:10px; color:#aaa; margin-top:2px;">8 / 30</div>
+
+          <div class="label">정원 수 <span style="color:#aaa; font-weight:400;">(나눠 받을 인원)</span></div>
+          <div style="display:flex; align-items:center; gap:12px; margin-top:6px;">
+            <div class="btn btn-ghost btn-sm">−</div>
+            <span style="font-size:22px; font-weight:700; min-width:60px; text-align:center;">5명</span>
+            <div class="btn btn-ghost btn-sm">+</div>
+          </div>
+
+          <div class="label">상세 내용</div>
+          <textarea class="input textarea" placeholder="미개봉, 박스째 나눔 OK · 직거래 희망 위치 · 보관 상태 등을 적어주세요">미개봉 제품이에요. 이사로 인해 나눔합니다.</textarea>
+          <div style="text-align:right; font-size:10px; color:#aaa; margin-top:2px;">32 / 500</div>
+        </div>
+
+        <!-- 규칙 -->
+        <div class="box" style="background:#f0f8ff; border-color:#acd;">
+          <div style="font-size:11px; font-weight:700; margin-bottom:6px;">🔒 등록 규칙</div>
+          <ul style="font-size:11px; color:#555; padding-left:14px; line-height:1.8;">
+            <li>가공·미개봉 식품만 등록 (직접 만든 음식 ✕)</li>
+            <li>소비기한은 AI가 자동 인식 · 수정 불가</li>
+            <li>회원당 활성 물품 최대 10개</li>
+          </ul>
+        </div>
+
+        <!-- CTA -->
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <div class="btn btn-ghost btn-lg">취소</div>
+          <div class="btn btn-primary btn-lg" style="flex:1;">등록하기</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 마이페이지 ========== -->
+  <div class="page" id="page-mypage">
+    <div class="page-title">마이페이지 — 내가 등록한 물품</div>
+
+    <div class="app-header">
+      <div class="app-logo">🥗 FoodShare</div>
+    </div>
+
+    <div class="sidebar-layout">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+          <div class="avatar" style="width:44px; height:44px; font-size:14px;">김</div>
+          <div>
+            <div style="font-size:14px; font-weight:700;">김이웃</div>
+            <div style="font-size:11px; color:#888;">neighbor@mail.com</div>
+          </div>
+        </div>
+
+        <!-- 통계 -->
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;">
+          <div style="text-align:center; padding:8px; border:1px solid #eee; border-radius:4px;">
+            <div style="font-size:18px; font-weight:800;">5</div>
+            <div style="font-size:10px; color:#888;">등록</div>
+          </div>
+          <div style="text-align:center; padding:8px; border:1px solid #eee; border-radius:4px;">
+            <div style="font-size:18px; font-weight:800;">2</div>
+            <div style="font-size:10px; color:#888;">진행중</div>
+          </div>
+          <div style="text-align:center; padding:8px; border:1px solid #eee; border-radius:4px;">
+            <div style="font-size:18px; font-weight:800;">3</div>
+            <div style="font-size:10px; color:#888;">완료</div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- 메뉴 -->
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div class="btn btn-primary btn-sm" style="justify-content:flex-start; gap:6px;">👤 내가 등록한 물품</div>
+          <div class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:6px;">📋 보낸 요청</div>
+          <div class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:6px;">💬 채팅 목록</div>
+          <div class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:6px;">✏️ 정보 수정</div>
+          <hr class="divider" />
+          <div class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:6px;">→ 로그아웃</div>
+          <div class="btn btn-danger btn-sm" style="justify-content:flex-start; gap:6px;">🗑 회원 탈퇴</div>
+        </div>
+      </div>
+
+      <!-- 메인: 내 물품 목록 -->
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div style="font-size:16px; font-weight:800;">내가 등록한 물품</div>
+          <div style="font-size:12px; color:#888;">총 5건 · 진행중 2건</div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab on">전체</div>
+          <div class="tab">진행중</div>
+          <div class="tab">완료</div>
+          <div class="tab">만료/미완료</div>
+        </div>
+
+        <div>
+          <div class="list-row">
+            <div class="img-ph img-sq" style="width:60px; height:60px; border-radius:6px; flex-shrink:0;">📷</div>
+            <div class="list-row-body">
+              <div style="font-size:13px; font-weight:700;">미개봉 시리얼</div>
+              <div style="font-size:11px; color:#888;">소비기한 2026-08-30</div>
+              <div style="margin-top:4px; display:flex; gap:6px;">
+                <span class="badge badge-green">진행중</span>
+                <span class="badge badge-gray">2/5명</span>
+              </div>
+            </div>
+            <div class="list-row-actions">
+              <div class="btn btn-ghost btn-sm">보기</div>
+              <div class="btn btn-ghost btn-sm">수정</div>
+              <div class="btn btn-danger btn-sm">삭제</div>
+            </div>
+          </div>
+
+          <div class="list-row">
+            <div class="img-ph img-sq" style="width:60px; height:60px; border-radius:6px; flex-shrink:0;">📷</div>
+            <div class="list-row-body">
+              <div style="font-size:13px; font-weight:700;">통조림 고등어 3캔</div>
+              <div style="font-size:11px; color:#888;">소비기한 2026-12-01</div>
+              <div style="margin-top:4px; display:flex; gap:6px;">
+                <span class="badge badge-blue">완료</span>
+                <span class="badge badge-gray">3/3명</span>
+              </div>
+            </div>
+            <div class="list-row-actions">
+              <div class="btn btn-ghost btn-sm">보기</div>
+            </div>
+          </div>
+
+          <div class="list-row">
+            <div class="img-ph img-sq" style="width:60px; height:60px; border-radius:6px; flex-shrink:0;">📷</div>
+            <div class="list-row-body">
+              <div style="font-size:13px; font-weight:700;">라면 5봉지</div>
+              <div style="font-size:11px; color:#888;">소비기한 2026-06-01</div>
+              <div style="margin-top:4px; display:flex; gap:6px;">
+                <span class="badge badge-gray">만료</span>
+                <span class="badge badge-gray">1/5명</span>
+              </div>
+            </div>
+            <div class="list-row-actions">
+              <div class="btn btn-ghost btn-sm">보기</div>
+              <div class="btn btn-danger btn-sm">삭제</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 음식 수정 모달 -->
+    <div class="section" style="margin-top:40px;">
+      <div class="section-title">음식 수정 모달 — PATCH /foods/{foodId}</div>
+      <div class="modal-wrap">
+        <div class="modal-close">✕</div>
+        <div style="font-size:10px; color:#888; font-weight:700;">EDIT FOOD</div>
+        <div class="modal-title">물품 수정</div>
+
+        <div class="label">물품 이름</div>
+        <input class="input" value="미개봉 시리얼" />
+
+        <div class="label">정원 수</div>
+        <div style="display:flex; align-items:center; gap:12px; margin-top:6px; margin-bottom:12px;">
+          <div class="btn btn-ghost btn-sm">−</div>
+          <span style="font-size:20px; font-weight:700; min-width:60px; text-align:center;">5명</span>
+          <div class="btn btn-ghost btn-sm">+</div>
+        </div>
+
+        <div class="label">상세 내용</div>
+        <textarea class="input textarea">미개봉 제품이에요. 이사로 인해 나눔합니다.</textarea>
+
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <div class="btn btn-ghost" style="flex:1;">취소</div>
+          <div class="btn btn-primary" style="flex:2;">저장하기</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 보낸 요청 ========== -->
+  <div class="page" id="page-my-requests">
+    <div class="page-title">보낸 요청 — GET /members/me/requests</div>
+
+    <div class="app-header">
+      <div class="app-logo">🥗 FoodShare</div>
+    </div>
+
+    <div class="sidebar-layout">
+      <div class="sidebar">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+          <div class="avatar" style="width:44px; height:44px; font-size:14px;">김</div>
+          <div>
+            <div style="font-size:14px; font-weight:700;">김이웃</div>
+            <div style="font-size:11px; color:#888;">neighbor@mail.com</div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:6px;">👤 내가 등록한 물품</div>
+          <div class="btn btn-primary btn-sm" style="justify-content:flex-start; gap:6px;">📋 보낸 요청</div>
+          <div class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:6px;">💬 채팅 목록</div>
+          <div class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:6px;">✏️ 정보 수정</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div style="font-size:16px; font-weight:800;">보낸 요청</div>
+          <div style="font-size:12px; color:#888;">총 3건</div>
+        </div>
+
+        <div>
+          <div class="list-row">
+            <div class="img-ph img-sq" style="width:60px; height:60px; border-radius:6px; flex-shrink:0;">📷</div>
+            <div class="list-row-body">
+              <div style="font-size:13px; font-weight:700;">통조림 참치 5캔</div>
+              <div style="font-size:11px; color:#888;">등록자 박이웃</div>
+              <div style="margin-top:4px;">
+                <span class="badge" style="border-color:#27a; color:#27a; background:#f0f8ff;">대기중</span>
+              </div>
+            </div>
+            <div class="list-row-actions">
+              <div class="btn btn-ghost btn-sm">보기</div>
+              <div class="btn btn-danger btn-sm">취소</div>
+            </div>
+          </div>
+
+          <div class="list-row">
+            <div class="img-ph img-sq" style="width:60px; height:60px; border-radius:6px; flex-shrink:0;">📷</div>
+            <div class="list-row-body">
+              <div style="font-size:13px; font-weight:700;">과자 세트</div>
+              <div style="font-size:11px; color:#888;">등록자 이이웃</div>
+              <div style="margin-top:4px;">
+                <span class="badge badge-green">수락됨</span>
+              </div>
+            </div>
+            <div class="list-row-actions">
+              <div class="btn btn-ghost btn-sm">보기</div>
+            </div>
+          </div>
+
+          <div class="list-row">
+            <div class="img-ph img-sq" style="width:60px; height:60px; border-radius:6px; flex-shrink:0;">📷</div>
+            <div class="list-row-body">
+              <div style="font-size:13px; font-weight:700;">레토르트 카레</div>
+              <div style="font-size:11px; color:#888;">등록자 최이웃</div>
+              <div style="margin-top:4px;">
+                <span class="badge badge-gray">거절됨</span>
+              </div>
+            </div>
+            <div class="list-row-actions">
+              <div class="btn btn-ghost btn-sm">보기</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 채팅 ========== -->
+  <div class="page" id="page-chat">
+    <div class="page-title">채팅 — GET /members/me/chat/rooms + STOMP WebSocket</div>
+
+    <div class="app-header">
+      <div class="app-logo">🥗 FoodShare</div>
+    </div>
+
+    <div class="chat-layout">
+      <!-- 채팅 목록 사이드바 -->
+      <div class="chat-sidebar">
+        <div class="chat-sidebar-head">💬 채팅 목록</div>
+        <div class="chat-room-item on">
+          <div class="avatar" style="width:36px; height:36px;">A</div>
+          <div class="chat-room-body">
+            <div class="chat-room-name">홍길동 · 미개봉 시리얼</div>
+            <div class="chat-room-last">감사합니다! 내일 픽업 가능할까요?</div>
+          </div>
+          <div style="font-size:10px; color:#888; flex-shrink:0;">오후 3:22</div>
+        </div>
+        <div class="chat-room-item">
+          <div class="avatar" style="width:36px; height:36px;">B</div>
+          <div class="chat-room-body">
+            <div class="chat-room-name">이순신 · 라면 5봉지</div>
+            <div class="chat-room-last">네 괜찮아요!</div>
+          </div>
+          <div style="font-size:10px; color:#888; flex-shrink:0;">어제</div>
+        </div>
+        <div class="chat-room-item">
+          <div class="avatar" style="width:36px; height:36px;">C</div>
+          <div class="chat-room-body">
+            <div class="chat-room-name">김철수 · 통조림 고등어</div>
+            <div class="chat-room-last">안녕하세요!</div>
+          </div>
+          <div style="font-size:10px; color:#888; flex-shrink:0;">6/20</div>
+        </div>
+      </div>
+
+      <!-- 채팅방 -->
+      <div class="chat-main">
+        <div class="chat-main-head">홍길동 · 미개봉 시리얼</div>
+        <div class="chat-messages">
+          <div class="chat-msg other">
+            <div class="chat-msg-name">홍길동</div>
+            <div class="chat-bubble">안녕하세요! 나눔 감사합니다 😊</div>
+          </div>
+          <div class="chat-msg mine">
+            <div class="chat-bubble">네 안녕하세요! 언제 픽업 가능하신가요?</div>
+          </div>
+          <div class="chat-msg other">
+            <div class="chat-msg-name">홍길동</div>
+            <div class="chat-bubble">내일 오후 3시 이후에 가능합니다.<br/>강남역 근처로 오시면 될 것 같아요!</div>
+          </div>
+          <div class="chat-msg mine">
+            <div class="chat-bubble">감사합니다! 내일 픽업 가능할까요?</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input class="input" style="flex:1; margin:0;" placeholder="메시지를 입력하세요…" />
+          <div class="btn btn-primary">전송</div>
+        </div>
+      </div>
+    </div>
+    <div class="ann" style="margin-top:8px;">실시간: STOMP /ws → /pub/chat/rooms/{roomId} 전송 · /user/queue/messages 수신</div>
+  </div>
+
+  <!-- ========== 로그인 ========== -->
+  <div class="page" id="page-login">
+    <div class="page-title">로그인 — POST /auth/login</div>
+
+    <div style="max-width:420px; margin:0 auto;">
+      <div style="text-align:center; margin-bottom:32px;">
+        <div style="font-size:32px; font-weight:900; letter-spacing:-0.02em;">🥗 FoodShare</div>
+        <div style="font-size:13px; color:#888; margin-top:6px;">이웃과 함께하는 음식 나눔 서비스</div>
+      </div>
+
+      <div class="modal-wrap">
+        <div style="font-size:10px; color:#888; font-weight:700;">SIGN IN</div>
+        <div class="modal-title">로그인</div>
+
+        <div class="label">이메일</div>
+        <input class="input" type="email" placeholder="이메일 주소" />
+
+        <div class="label">비밀번호</div>
+        <input class="input" type="password" placeholder="비밀번호" />
+
+        <div class="btn btn-primary btn-full btn-lg" style="margin-top:20px;">로그인</div>
+
+        <div style="text-align:center; margin-top:14px; font-size:12px; color:#888;">
+          계정이 없으신가요? <span style="color:#222; font-weight:700; text-decoration:underline; cursor:pointer;">회원가입</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 회원가입 ========== -->
+  <div class="page" id="page-signup">
+    <div class="page-title">회원가입 — POST /members + 이메일 인증</div>
+
+    <div style="max-width:480px; margin:0 auto;">
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="font-size:28px; font-weight:900;">🥗 FoodShare</div>
+      </div>
+
+      <div class="modal-wrap">
+        <div style="font-size:10px; color:#888; font-weight:700;">SIGN UP</div>
+        <div class="modal-title">회원가입</div>
+
+        <!-- STEP 1: 이메일 인증 -->
+        <div class="note">STEP 1 · 이메일 인증 → POST /auth/email/send → /auth/email/verify</div>
+        <div class="label">이메일</div>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <input class="input" style="flex:1;" type="email" placeholder="이메일 주소" />
+          <div class="btn btn-ghost" style="flex-shrink:0;">인증코드 전송</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input class="input" style="flex:1;" placeholder="인증코드 6자리" />
+          <div class="btn btn-primary" style="flex-shrink:0;">확인</div>
+        </div>
+        <div style="font-size:11px; color:#2a7; margin-top:6px; margin-bottom:16px;">✅ 이메일 인증 완료</div>
+
+        <!-- STEP 2: 비밀번호 -->
+        <div class="label">비밀번호</div>
+        <input class="input" type="password" placeholder="8자 이상" />
+
+        <!-- STEP 3: 닉네임 -->
+        <div class="note" style="margin-top:12px;">닉네임 중복 확인 → GET /members/nickname/check</div>
+        <div class="label">닉네임</div>
+        <div style="display:flex; gap:8px;">
+          <input class="input" style="flex:1;" placeholder="2~10자" />
+          <div class="btn btn-ghost" style="flex-shrink:0;">중복 확인</div>
+        </div>
+
+        <!-- STEP 4: 주소 -->
+        <div class="label">주소 <span style="color:#aaa; font-weight:400;">(선택)</span></div>
+        <div style="display:flex; gap:8px; margin-bottom:6px;">
+          <input class="input" style="flex:1;" placeholder="도로명 주소 검색" readonly />
+          <div class="btn btn-ghost" style="flex-shrink:0;">주소 검색</div>
+        </div>
+        <input class="input" placeholder="상세주소 (선택)" />
+
+        <div class="btn btn-primary btn-full btn-lg" style="margin-top:20px;">가입하기</div>
+
+        <div style="text-align:center; margin-top:12px; font-size:12px; color:#888;">
+          이미 계정이 있으신가요? <span style="color:#222; font-weight:700; text-decoration:underline; cursor:pointer;">로그인</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    document.getElementById('nav-' + id).classList.add('active');
+  }
+</script>
+</body>
+</html>
