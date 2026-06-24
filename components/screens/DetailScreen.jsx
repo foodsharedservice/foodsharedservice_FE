@@ -12,9 +12,37 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
-import { StatusBadge, Photo, Avatar, CapacityBar, StateBox, Spinner } from "@/components/ui";
+import { StatusBadge, Photo, Avatar, StateBox, Spinner } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
 import API from "@/lib/api";
+
+/* zip 디자인의 lucide 아이콘(repo 아이콘셋에 없어 로컬 정의) */
+function ShieldCheckIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+function PackageIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M16.5 9.4 7.55 4.24" />
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <path d="M3.27 6.96 12 12.01l8.73-5.05" />
+      <path d="M12 22.08V12" />
+    </svg>
+  );
+}
+function AlertCircleIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v4M12 16h.01" />
+    </svg>
+  );
+}
 
 export default function DetailScreen({ foodId }) {
   const router = useRouter();
@@ -200,8 +228,8 @@ export default function DetailScreen({ foodId }) {
               </div>
 
               {isExpImage && (
-                <div className="absolute top-3.5 right-3.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber text-white text-[11px] font-bold shadow-warm">
-                  <Icon.Calendar /> 소비기한 인증 사진
+                <div className="absolute top-3.5 right-3.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber/90 text-white text-[11px] font-bold shadow-warm backdrop-blur-sm">
+                  <ShieldCheckIcon className="w-3.5 h-3.5" /> 소비기한 인증
                 </div>
               )}
 
@@ -214,34 +242,36 @@ export default function DetailScreen({ foodId }) {
               {images.length > 1 && (
                 <>
                   <button
-                    className="absolute top-1/2 left-3 -translate-y-1/2 w-10 h-10 grid place-items-center rounded-full bg-white/90 text-foreground shadow-warm hover:bg-white hover:scale-105 transition-all"
+                    className="absolute top-1/2 left-3 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-full bg-white/80 backdrop-blur-sm text-foreground shadow-sm hover:bg-white transition-colors"
                     onClick={prev}
                     aria-label="이전"
                   >
-                    <Icon.ChevronLeft />
+                    <Icon.ChevronLeft className="w-4 h-4" />
                   </button>
                   <button
-                    className="absolute top-1/2 right-3 -translate-y-1/2 w-10 h-10 grid place-items-center rounded-full bg-white/90 text-foreground shadow-warm hover:bg-white hover:scale-105 transition-all"
+                    className="absolute top-1/2 right-3 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-full bg-white/80 backdrop-blur-sm text-foreground shadow-sm hover:bg-white transition-colors"
                     onClick={next}
                     aria-label="다음"
                   >
-                    <Icon.ChevronRight />
+                    <Icon.ChevronRight className="w-4 h-4" />
                   </button>
                 </>
               )}
             </div>
 
             {images.length > 1 && (
-              <div className="flex gap-2 mt-2.5">
+              <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
                 {images.map((img, i) => (
                   <button
                     key={img.imageId ?? i}
-                    className={`relative flex-1 rounded-lg overflow-hidden border-2 transition-colors ${i === photoIdx ? "border-primary" : "border-transparent hover:border-border"}`}
+                    className={`relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${i === photoIdx ? "border-amber shadow-warm" : "border-transparent opacity-60 hover:opacity-100"}`}
                     onClick={() => setPhotoIdx(i)}
                   >
                     <Photo label="" src={img.accessUrl} ratio="1/1" />
                     {img.imageType === "EXPIRED" && (
-                      <div className="absolute top-1 right-1 w-[18px] h-[18px] grid place-items-center rounded-full bg-amber text-[11px]">⭐</div>
+                      <div className="absolute top-1 right-1 w-[18px] h-[18px] grid place-items-center rounded-full bg-amber text-white">
+                        <ShieldCheckIcon className="w-3 h-3" />
+                      </div>
                     )}
                   </button>
                 ))}
@@ -251,40 +281,58 @@ export default function DetailScreen({ foodId }) {
 
           {/* ============ Right: info ============ */}
           <div className="flex flex-col animate-fade-in-up stagger-1">
-            <div className="flex items-center gap-3 pb-4 border-b border-border">
-              <Avatar name={d.ownerNickName || (isOwner ? (user && user.nickName) || "나" : "?")} size={42} />
+            <div className="flex items-start gap-3 mb-4">
+              <StatusBadge status={d.statusTx} />
+            </div>
+
+            <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight mb-4">{d.foodName}</h1>
+
+            <div className="flex items-center gap-3 mb-6">
+              <Avatar name={d.ownerNickName || (isOwner ? (user && user.nickName) || "나" : "?")} size={36} />
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm text-foreground">{isOwner ? "내가 등록한 물품" : (d.ownerNickName || "이웃")}</div>
+                <div className="text-sm font-semibold text-foreground">{isOwner ? "내가 등록한 물품" : (d.ownerNickName || "이웃")}</div>
                 <div className="text-xs text-muted-foreground mt-0.5">등록자</div>
               </div>
             </div>
 
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-snug mt-4 mb-4">{d.foodName}</h1>
+            <div className="h-px bg-border mb-6" />
 
-            <div className="bg-muted rounded-xl p-4 mb-4">
-              <div className="flex items-center justify-between gap-3 py-2.5 border-b border-dashed border-border">
-                <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground flex-shrink-0">
-                  <Icon.Calendar /> 소비기한
+            {/* Details Grid (cream cards) */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-cream rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon.Calendar className="text-amber" />
+                  <span className="text-xs text-muted-foreground font-medium">소비기한</span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="text-[15px] font-bold text-foreground">{d.expired}</span>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${daysLeft <= 14 ? "bg-amber/15 text-amber-dark" : "bg-primary/10 text-primary"}`}>
-                    {daysLeft < 0 ? `D+${Math.abs(daysLeft)}` : `D-${daysLeft}`}
-                  </span>
-                </div>
+                <p className="font-semibold text-foreground text-sm">{d.expired}</p>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block ${daysLeft <= 14 ? "bg-amber/15 text-amber-dark" : "bg-primary/10 text-primary"}`}>
+                  {daysLeft < 0 ? `만료됨` : `D-${daysLeft}`}
+                </span>
               </div>
-              <div className="flex items-center justify-between gap-3 py-2.5">
-                <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground flex-shrink-0">
-                  <Icon.Users /> 정원
+
+              <div className="bg-cream rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon.Users className="text-amber" />
+                  <span className="text-xs text-muted-foreground font-medium">나눔 인원</span>
                 </div>
-                <div className="flex items-center"><CapacityBar approved={d.approvedCount} total={d.capacity} /></div>
+                <p className="font-semibold text-foreground text-sm">{d.approvedCount} / {d.capacity}명</p>
+                <div className="w-full h-1.5 bg-muted rounded-full mt-2">
+                  <div className="h-full bg-amber rounded-full transition-all" style={{ width: `${d.capacity ? (d.approvedCount / d.capacity) * 100 : 0}%` }} />
+                </div>
               </div>
             </div>
 
-            <div className="text-sm leading-relaxed text-foreground/80 mb-6 pb-6 border-b border-border min-h-[40px]">
-              {(d.details || "").split("\n").map((p, i) => (
-                <p key={i} className="[&+p]:mt-3">{p}</p>
-              ))}
+            {/* Description (cream card) */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                <PackageIcon className="text-amber" />
+                물품 설명
+              </h3>
+              <div className="text-muted-foreground leading-relaxed text-sm bg-cream rounded-xl p-4 min-h-[40px]">
+                {(d.details || "").split("\n").map((p, i) => (
+                  <p key={i} className="[&+p]:mt-3">{p}</p>
+                ))}
+              </div>
             </div>
 
             {/* ============ 등록자: 받은 요청 관리 ============ */}
@@ -292,16 +340,9 @@ export default function DetailScreen({ foodId }) {
               <OwnerRequests foodId={d.foodId} onChange={load} />
             ) : (
               <>
-                <div className="flex flex-col sm:flex-row gap-2.5">
+                <div className="flex flex-col gap-3">
                   <button
-                    className="inline-flex items-center justify-center gap-1.5 h-11 px-5 rounded-full bg-card border border-border text-foreground/80 font-medium hover:border-amber hover:text-amber transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={openChat}
-                    disabled={chatBusy}
-                  >
-                    <Icon.Chat /> {chatBusy ? "여는 중…" : "채팅하기"}
-                  </button>
-                  <button
-                    className="flex-1 inline-flex items-center justify-center gap-2 h-11 px-6 rounded-full bg-amber text-white font-semibold shadow-warm hover:bg-amber-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-amber text-white font-semibold shadow-warm-lg hover:bg-amber-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => {
                       if (!user) { router.push("/login"); return; }
                       setReqError(null); setRequestSent(false); setRequestModal(true);
@@ -318,10 +359,17 @@ export default function DetailScreen({ foodId }) {
                       ? "정원이 다 찼어요"
                       : "나눔 요청 보내기"}
                   </button>
+                  <button
+                    className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-transparent border border-amber text-amber font-medium hover:bg-amber/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={openChat}
+                    disabled={chatBusy}
+                  >
+                    <Icon.Chat className="w-4 h-4" /> {chatBusy ? "여는 중…" : "채팅으로 문의하기"}
+                  </button>
                 </div>
                 {myRequest && myRequest.status === "REQUEST" && (
                   <button
-                    className="block mx-auto mt-2.5 text-xs text-destructive underline underline-offset-2 hover:opacity-80 transition-opacity"
+                    className="block mx-auto mt-3 text-xs text-destructive underline underline-offset-2 hover:opacity-80 transition-opacity"
                     onClick={() => {
                       if (!confirm("요청을 취소할까요?")) return;
                       API.requests.cancel(d.foodId, myRequest.requestId)
@@ -332,7 +380,16 @@ export default function DetailScreen({ foodId }) {
                     요청 취소하기
                   </button>
                 )}
-                <div className="text-center text-xs text-muted-foreground mt-2.5">본인이 등록한 물품과 중복 요청은 보낼 수 없어요.</div>
+                {!user && (
+                  <div className="bg-amber/10 rounded-xl p-4 flex items-start gap-3 mt-3">
+                    <AlertCircleIcon className="w-5 h-5 text-amber flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">로그인이 필요합니다</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">나눔 요청을 하려면 로그인해주세요.</p>
+                    </div>
+                  </div>
+                )}
+                <div className="text-center text-xs text-muted-foreground mt-3">본인이 등록한 물품과 중복 요청은 보낼 수 없어요.</div>
               </>
             )}
           </div>
@@ -385,10 +442,11 @@ function OwnerRequests({ foodId, onChange }) {
   const decided = (list || []).filter((r) => r.status !== "REQUEST");
 
   return (
-    <div className="bg-card rounded-2xl border border-border shadow-warm p-4">
-      <div className="flex items-center gap-2 text-sm font-bold mb-2.5">
+    <div className="bg-cream rounded-2xl p-4">
+      <div className="flex items-center gap-2 text-sm font-bold mb-3">
+        <Icon.Users className="text-amber" />
         <b className="font-bold">받은 나눔 요청</b>
-        {list && <span className="inline-block px-1.5 py-0.5 rounded-full bg-destructive text-white text-[11px] font-bold">{pending.length}</span>}
+        {list && <span className="inline-block px-1.5 py-0.5 rounded-full bg-amber text-white text-[11px] font-bold">{pending.length}</span>}
       </div>
       {list === null ? (
         <div className="grid place-items-center py-6"><Spinner size={22} /></div>
@@ -397,33 +455,37 @@ function OwnerRequests({ foodId, onChange }) {
       ) : (list.length === 0) ? (
         <div className="py-7 text-center text-muted-foreground text-xs">아직 받은 요청이 없어요</div>
       ) : (
-        <>
+        <div className="space-y-3">
           {pending.map((r) => (
-            <div className="flex items-center gap-2.5 py-2.5 border-t border-dashed border-border first-of-type:border-t-0" key={r.requestFoodId}>
-              <Avatar name={r.requesterNickName || "?"} size={34} />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-foreground">{r.requesterNickName || "이웃"}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">나눔을 요청했어요</div>
+            <div className="flex items-center justify-between bg-card rounded-xl p-3 border border-border" key={r.requestFoodId}>
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar name={r.requesterNickName || "?"} size={34} />
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-foreground truncate">{r.requesterNickName || "이웃"}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">나눔을 요청했어요</div>
+                </div>
               </div>
-              <div className="flex gap-1.5 flex-shrink-0">
-                <button className="inline-flex items-center justify-center h-8 px-3 rounded-full bg-card border border-border text-foreground/80 text-xs font-medium hover:border-amber hover:text-amber transition-colors" onClick={() => act(r.requestFoodId, "reject")}>거절</button>
-                <button className="inline-flex items-center justify-center h-8 px-3 rounded-full bg-amber text-white text-xs font-semibold shadow-warm hover:bg-amber-dark transition-colors" onClick={() => act(r.requestFoodId, "approve")}>수락</button>
+              <div className="flex gap-2 flex-shrink-0">
+                <button className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber text-white shadow-warm hover:bg-amber-dark transition-colors" onClick={() => act(r.requestFoodId, "approve")} aria-label="수락"><Icon.Check className="w-3.5 h-3.5" /></button>
+                <button className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-card border border-destructive/40 text-destructive hover:bg-destructive/5 transition-colors" onClick={() => act(r.requestFoodId, "reject")} aria-label="거절"><Icon.X className="w-3.5 h-3.5" /></button>
               </div>
             </div>
           ))}
           {decided.map((r) => (
-            <div className="flex items-center gap-2.5 py-2.5 border-t border-dashed border-border first-of-type:border-t-0 opacity-70" key={r.requestFoodId}>
-              <Avatar name={r.requesterNickName || "?"} size={34} />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-foreground">{r.requesterNickName || "이웃"}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{r.status === "APPROVED" ? "수락됨" : "거절됨"}</div>
+            <div className="flex items-center justify-between bg-card rounded-xl p-3 border border-border opacity-70" key={r.requestFoodId}>
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar name={r.requesterNickName || "?"} size={34} />
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-foreground truncate">{r.requesterNickName || "이웃"}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{r.status === "APPROVED" ? "수락됨" : "거절됨"}</div>
+                </div>
               </div>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${r.status === "APPROVED" ? "badge-in-progress" : "badge-incomplete"}`}>
                 {r.status === "APPROVED" ? "수락" : "거절"}
               </span>
             </div>
           ))}
-        </>
+        </div>
       )}
     </div>
   );
@@ -450,7 +512,7 @@ function RequestModal({ food, sent, error, onClose, onSubmit }) {
               <b className="font-semibold text-foreground">{food.foodName}</b> 나눔을 요청해요. 등록자가 수락하면 채팅으로 픽업을 조율할 수 있어요.
             </p>
 
-            <div className="flex items-center gap-3 p-3 bg-muted rounded-xl">
+            <div className="flex items-center gap-3 p-3 bg-cream rounded-xl">
               <div className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden">
                 <Photo label="나눔마켓" src={(food.images && food.images[0] && food.images[0].accessUrl) || undefined} ratio="1/1" />
               </div>
@@ -497,7 +559,7 @@ function RequestModal({ food, sent, error, onClose, onSubmit }) {
           </>
         ) : (
           <div className="py-4 text-center">
-            <div className="w-16 h-16 mx-auto grid place-items-center rounded-full bg-primary text-white">
+            <div className="w-16 h-16 mx-auto grid place-items-center rounded-full bg-amber text-white shadow-warm">
               <Icon.Check style={{ width: 28, height: 28 }} />
             </div>
             <h2 className="text-xl font-bold text-foreground mt-3.5">요청을 보냈어요</h2>

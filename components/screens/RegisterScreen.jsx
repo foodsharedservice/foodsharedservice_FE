@@ -148,12 +148,11 @@ export default function RegisterScreen() {
           <div className="flex flex-col gap-6">
             {/* STEP 1 — 소비기한 사진 */}
             <section className="bg-card rounded-2xl border border-border shadow-warm p-5 sm:p-6 animate-fade-in-up stagger-1">
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <div>
-                  <div className="text-xs font-semibold tracking-widest uppercase text-amber">STEP 1 · 필수</div>
-                  <h3 className="text-lg font-bold text-foreground mt-1">소비기한 사진</h3>
-                </div>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber/10 text-amber-dark text-xs font-semibold flex-shrink-0">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-full bg-amber text-white grid place-items-center text-sm font-bold flex-shrink-0">1</div>
+                <h3 className="text-lg font-bold text-foreground">소비기한 사진</h3>
+                <span className="text-xs text-destructive font-medium">필수</span>
+                <span className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber/10 text-amber-dark text-xs font-semibold flex-shrink-0">
                   <Icon.Sparkle /> AI 자동 인식
                 </span>
               </div>
@@ -206,14 +205,17 @@ export default function RegisterScreen() {
                 </div>
               )}
               {aiState === "done" && (
-                <div className="rounded-xl border border-amber/30 bg-gradient-to-br from-amber/15 to-cream p-4">
-                  <div className="flex items-center gap-1 text-xs font-semibold tracking-widest uppercase text-primary">
-                    AI 인식 결과 <Icon.Lock />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground mt-1 tabular-nums tracking-tight">{expDate}</div>
-                  <div className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    인식이 잘못됐다면 사진을 다시 올려주세요.<br />
-                    소비기한은 사용자가 임의로 수정할 수 없어요.
+                <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
+                  <Icon.Check className="w-5 h-5 text-green-700 flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1 text-sm font-semibold text-green-700">
+                      소비기한 인식 완료 <Icon.Lock className="text-green-700" />
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-bold text-foreground mt-1 tabular-nums tracking-tight">{expDate}</div>
+                    <div className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                      인식이 잘못됐다면 사진을 다시 올려주세요.<br />
+                      소비기한은 사용자가 임의로 수정할 수 없어요.
+                    </div>
                   </div>
                 </div>
               )}
@@ -236,12 +238,11 @@ export default function RegisterScreen() {
 
             {/* STEP 2 — 추가 사진 */}
             <section className="bg-card rounded-2xl border border-border shadow-warm p-5 sm:p-6 animate-fade-in-up stagger-2">
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <div>
-                  <div className="text-xs font-semibold tracking-widest uppercase text-amber">STEP 2 · 선택</div>
-                  <h3 className="text-lg font-bold text-foreground mt-1">추가 사진</h3>
-                </div>
-                <span className="text-xs text-muted-foreground tabular-nums">{photos.length} / 4</span>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground grid place-items-center text-sm font-bold flex-shrink-0">2</div>
+                <h3 className="text-lg font-bold text-foreground">추가 사진</h3>
+                <span className="text-xs text-muted-foreground">선택</span>
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{photos.length} / 4</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-4">제품 앞면·뒷면·라벨 등을 보여주면 신뢰도가 올라가요.</p>
 
@@ -275,9 +276,10 @@ export default function RegisterScreen() {
           <div className="flex flex-col gap-6">
             {/* STEP 3 — 물품 정보 */}
             <section className="bg-card rounded-2xl border border-border shadow-warm p-5 sm:p-6 animate-fade-in-up stagger-3">
-              <div className="mb-4">
-                <div className="text-xs font-semibold tracking-widest uppercase text-amber">STEP 3 · 필수</div>
-                <h3 className="text-lg font-bold text-foreground mt-1">물품 정보</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-full bg-amber text-white grid place-items-center text-sm font-bold flex-shrink-0">3</div>
+                <h3 className="text-lg font-bold text-foreground">물품 정보</h3>
+                <span className="text-xs text-destructive font-medium">필수</span>
               </div>
 
               {/* 물품 이름 */}
@@ -334,14 +336,14 @@ export default function RegisterScreen() {
             </section>
 
             {/* 등록 규칙 */}
-            <div className="flex gap-3 rounded-xl border border-primary/15 bg-primary/5 p-4 text-primary animate-fade-in-up stagger-4">
-              <Icon.Lock className="flex-shrink-0 mt-0.5" />
+            <div className="flex gap-3 rounded-xl bg-amber/10 p-4 animate-fade-in-up stagger-4">
+              <span className="w-5 h-5 rounded-full bg-amber text-white grid place-items-center font-extrabold text-xs flex-shrink-0 mt-0.5">!</span>
               <div className="text-sm leading-relaxed">
-                <b className="block font-bold text-foreground mb-1">등록 규칙</b>
-                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
-                  <li>가공·미개봉 식품만 등록해주세요 (직접 만든 음식·신선식품 ✕)</li>
-                  <li>소비기한은 사진을 AI가 읽어 자동 설정 · 사용자 수정 불가</li>
-                  <li>회원당 활성 물품은 최대 10개</li>
+                <b className="block font-semibold text-foreground mb-1">등록 전 확인해주세요</b>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  <li>• 가공·미개봉 식품만 등록해주세요 (직접 만든 음식·신선식품 ✕)</li>
+                  <li>• 소비기한은 사진을 AI가 읽어 자동 설정 · 사용자 수정 불가</li>
+                  <li>• 회원당 활성 물품은 최대 10개</li>
                 </ul>
               </div>
             </div>
@@ -361,8 +363,12 @@ export default function RegisterScreen() {
                 onClick={submitFood}
                 className="flex-1 inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full bg-amber text-white font-semibold shadow-warm hover:bg-amber-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {busy ? "등록 중…"
-                  : !cover ? "소비기한 사진을 먼저 올려주세요"
+                {busy ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    등록 중…
+                  </>
+                ) : !cover ? "소비기한 사진을 먼저 올려주세요"
                   : aiState === "loading" ? "소비기한 인식 중…"
                   : aiState !== "done" ? "소비기한 사진을 다시 올려주세요"
                   : !foodName.trim() ? "물품 이름을 입력해주세요"
