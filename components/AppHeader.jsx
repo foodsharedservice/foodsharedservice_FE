@@ -81,8 +81,8 @@ export default function AppHeader() {
     : "sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-border";
 
   const linkCls = overHero
-    ? "text-white/90 hover:text-white"
-    : "text-foreground/70 hover:text-foreground";
+    ? "text-white/90 hover:text-white hover:bg-white/20"
+    : "text-foreground/80 hover:text-foreground hover:bg-accent/15";
 
   return (
     <header className={headerCls}>
@@ -122,7 +122,7 @@ export default function AppHeader() {
                 <button
                   onClick={() => setBellOpen((v) => !v)}
                   aria-label="알림"
-                  className={`relative w-10 h-10 grid place-items-center rounded-full transition-colors ${overHero ? "text-white hover:bg-white/15" : "text-foreground/70 hover:bg-muted"}`}
+                  className={`relative w-10 h-10 grid place-items-center rounded-full transition-colors ${overHero ? "text-white hover:bg-white/20" : "text-foreground/80 hover:bg-accent/15"}`}
                 >
                   <Bell className="w-5 h-5" />
                   {notifCount > 0 && !bellOpen && (
@@ -131,7 +131,7 @@ export default function AppHeader() {
                     </span>
                   )}
                 </button>
-                <button onClick={() => go("/mypage")} className="flex items-center gap-2 rounded-full hover:bg-muted transition-colors pl-1 pr-2.5 py-1">
+                <button onClick={() => go("/mypage")} className={`flex items-center gap-2 rounded-full transition-colors pl-1 pr-2.5 py-1 ${overHero ? "hover:bg-white/20" : "hover:bg-accent/15"}`}>
                   <span className="w-8 h-8 rounded-full bg-amber text-white grid place-items-center text-xs font-bold">
                     {(user.nickName || "U").charAt(0).toUpperCase()}
                   </span>
@@ -150,7 +150,7 @@ export default function AppHeader() {
 
           {/* 모바일 토글 */}
           <button
-            className={`md:hidden p-2 rounded-lg transition-colors ${overHero ? "text-white hover:bg-white/15" : "text-foreground hover:bg-muted"}`}
+            className={`md:hidden p-2 rounded-lg transition-colors ${overHero ? "text-white hover:bg-white/20" : "text-foreground hover:bg-accent/15"}`}
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="메뉴"
           >
@@ -171,7 +171,7 @@ export default function AppHeader() {
                 <button onClick={() => go("/register")} className="mt-2 inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-amber text-white font-semibold hover:bg-amber-dark transition-colors">
                   <PlusCircle className="w-4 h-4" /> 물품 등록
                 </button>
-                <button onClick={logout} className="mt-1 inline-flex items-center gap-2 px-3 h-11 rounded-xl text-destructive hover:bg-muted transition-colors text-sm font-medium">
+                <button onClick={logout} className="mt-1 inline-flex items-center gap-2 px-3 h-11 rounded-xl text-destructive hover:bg-destructive/10 transition-colors text-sm font-medium">
                   <LogOut className="w-4 h-4" /> 로그아웃
                 </button>
               </>
@@ -197,7 +197,7 @@ export default function AppHeader() {
 
 function MobileItem({ icon, label, onClick }) {
   return (
-    <button onClick={onClick} className="inline-flex items-center gap-2 px-3 h-11 rounded-xl text-foreground hover:bg-muted transition-colors text-sm font-medium text-left">
+    <button onClick={onClick} className="inline-flex items-center gap-2 px-3 h-11 rounded-xl text-foreground hover:bg-accent/15 transition-colors text-sm font-medium text-left">
       {icon} {label}
     </button>
   );

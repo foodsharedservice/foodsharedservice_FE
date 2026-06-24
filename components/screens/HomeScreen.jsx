@@ -7,12 +7,37 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight, Calendar, Users, ShieldCheck, Heart, Zap, Sprout, ChevronDown,
-} from "lucide-react";
+import Icon from "@/components/icons";
 import { StateBox, Spinner } from "@/components/ui";
 import { useAuth } from "@/components/AuthProvider";
 import API from "@/lib/api";
+
+/* zip 디자인에서 쓰는 아이콘 중 repo 아이콘셋에 없는 것은 로컬로 정의한다. */
+function ShieldCheckIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+function ZapIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 12 10h8a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 12 14z" />
+    </svg>
+  );
+}
+function SproutIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M7 20h10" />
+      <path d="M10 20c5.5-2.5.8-6.4 3-10" />
+      <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z" />
+      <path d="M14.1 6c-.9.8-1.6 2-2.1 3.6-.7-.5-1.2-1.4-1.4-2.6.7-1.3 1.7-2.2 3.5-1z" />
+    </svg>
+  );
+}
 
 const HERO_IMG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663787031264/X9QCmjHK3KpAWyKFiSUYQq/hero-food-sharing-ntYUJHbVS9Xr28czMMtfkh.webp";
@@ -161,7 +186,7 @@ export default function HomeScreen() {
                 onClick={() => document.getElementById("feed")?.scrollIntoView({ behavior: "smooth" })}
                 className="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-amber text-white font-semibold shadow-warm-lg hover:bg-amber-dark transition-colors"
               >
-                나눔 물품 보기 <ArrowRight className="w-4 h-4" />
+                나눔 물품 보기 <Icon.ArrowRight className="w-4 h-4" />
               </button>
               <button
                 onClick={() => router.push(user ? "/register" : "/signup")}
@@ -200,9 +225,9 @@ export default function HomeScreen() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: <ShieldCheck className="w-7 h-7" />, title: "AI 소비기한 인식", desc: "소비기한 사진을 찍으면 AI가 날짜를 자동으로 인식합니다. 안전한 식품만 나눔할 수 있어요.", color: "bg-green-50 text-green-600", delay: "stagger-1" },
-              { icon: <Heart className="w-7 h-7" />, title: "이웃과 함께", desc: "가공식품·미개봉 식품만 등록 가능해 위생 걱정 없이 나눔에 참여할 수 있습니다.", color: "bg-amber/10 text-amber-dark", delay: "stagger-2" },
-              { icon: <Zap className="w-7 h-7" />, title: "실시간 채팅", desc: "나눔 신청 후 등록자와 1:1 채팅으로 수령 장소와 시간을 편리하게 조율하세요.", color: "bg-blue-50 text-blue-600", delay: "stagger-3" },
+              { icon: <ShieldCheckIcon className="w-7 h-7" />, title: "AI 소비기한 인식", desc: "소비기한 사진을 찍으면 AI가 날짜를 자동으로 인식합니다. 안전한 식품만 나눔할 수 있어요.", color: "bg-green-50 text-green-600", delay: "stagger-1" },
+              { icon: <Icon.Heart className="w-7 h-7" />, title: "이웃과 함께", desc: "가공식품·미개봉 식품만 등록 가능해 위생 걱정 없이 나눔에 참여할 수 있습니다.", color: "bg-amber/10 text-amber-dark", delay: "stagger-2" },
+              { icon: <ZapIcon className="w-7 h-7" />, title: "실시간 채팅", desc: "나눔 신청 후 등록자와 1:1 채팅으로 수령 장소와 시간을 편리하게 조율하세요.", color: "bg-blue-50 text-blue-600", delay: "stagger-3" },
             ].map((f) => (
               <div key={f.title} className={`animate-fade-in-up ${f.delay} bg-card rounded-2xl p-8 border border-border shadow-warm`}>
                 <div className={`w-14 h-14 rounded-2xl ${f.color} flex items-center justify-center mb-5`}>{f.icon}</div>
@@ -226,7 +251,7 @@ export default function HomeScreen() {
               onClick={() => setSort(sort === "recent" ? "expiring" : "recent")}
               className="self-start sm:self-auto inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-card border border-border text-sm font-medium text-foreground/80 hover:border-amber hover:text-amber transition-colors"
             >
-              {sort === "recent" ? "최신순" : "마감 임박순"} <ChevronDown className="w-4 h-4" />
+              {sort === "recent" ? "최신순" : "마감 임박순"} <Icon.ChevronDown className="w-4 h-4" />
             </button>
           </div>
 
@@ -309,7 +334,7 @@ export default function HomeScreen() {
         <div className="container">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-lg bg-amber text-white grid place-items-center"><Sprout className="w-4 h-4" /></span>
+              <span className="w-8 h-8 rounded-lg bg-amber text-white grid place-items-center"><SproutIcon className="w-4 h-4" /></span>
               <span className="text-white font-semibold">나눔마켓</span>
             </div>
             <p className="text-sm text-center">© 2026 나눔마켓. 음식 낭비를 줄이는 따뜻한 커뮤니티.</p>
@@ -375,14 +400,14 @@ function FoodCard({ food, onClick }) {
         </h3>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            <Icon.Calendar className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
             <span className="text-xs text-muted-foreground">{formatDate(food.expired)}</span>
             <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ml-auto ${expiryBadgeClass(food.expired)}`}>
               {daysLeft <= 0 ? "만료됨" : `D-${daysLeft}`}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            <Icon.Users className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
             <span className="text-xs text-muted-foreground">{food.approvedCount} / {food.capacity}명</span>
             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden ml-1">
               <div

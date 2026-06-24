@@ -7,13 +7,59 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogIn, Mail, ArrowRight, CheckCircle2, Search } from "lucide-react";
+import Icon from "@/components/icons";
 import { useAuth } from "@/components/AuthProvider";
 import AddressSearch from "@/components/AddressSearch";
 import API from "@/lib/api";
 
 const LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663787031264/X9QCmjHK3KpAWyKFiSUYQq/logo-icon-6qpxFro6XBABtB6tshwecE.png";
+
+/* zip 디자인(lucide)에서 쓰는 아이콘 중 repo 아이콘셋에 없는 것은 로컬 인라인 SVG로 정의.
+   (Search·ArrowRight 는 @/components/icons 의 Icon 사용) */
+function EyeIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+function EyeOffIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
+      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+      <path d="m2 2 20 20" />
+    </svg>
+  );
+}
+function LogInIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+      <path d="M10 17l5-5-5-5" />
+      <path d="M15 12H3" />
+    </svg>
+  );
+}
+function MailIcon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  );
+}
+function CheckCircle2Icon(p) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
 
 const INPUT =
   "w-full h-11 rounded-xl border border-border bg-card px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber/30 focus:border-amber transition";
@@ -84,7 +130,7 @@ export function LoginScreen() {
                   className={`${INPUT} pr-10`} value={pw} onChange={(e) => setPw(e.target.value)} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -93,7 +139,7 @@ export function LoginScreen() {
 
             <button type="submit" disabled={loading || !email || !pw}
               className="w-full h-12 inline-flex items-center justify-center gap-2 bg-amber text-white hover:bg-amber-dark shadow-warm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:pointer-events-none">
-              {loading ? <><Spinner /> 로그인 중...</> : <><LogIn className="w-4 h-4" /> 로그인</>}
+              {loading ? <><Spinner /> 로그인 중...</> : <><LogInIcon className="w-4 h-4" /> 로그인</>}
             </button>
           </form>
 
@@ -254,7 +300,7 @@ export function SignupScreen() {
                     idx === currentStepIdx ? "border-amber text-amber" :
                     "border-border text-muted-foreground"
                   }`}>
-                    {idx < currentStepIdx ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                    {idx < currentStepIdx ? <CheckCircle2Icon className="w-3.5 h-3.5" /> : idx + 1}
                   </div>
                   <span className="text-xs font-medium hidden sm:block">{s.label}</span>
                 </div>
@@ -278,7 +324,7 @@ export function SignupScreen() {
               {error && <p className="text-sm text-destructive">{error}</p>}
               <button onClick={handleSendCode} disabled={loading}
                 className="w-full h-12 inline-flex items-center justify-center gap-2 bg-amber text-white hover:bg-amber-dark shadow-warm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:pointer-events-none">
-                {loading ? <Spinner /> : <Mail className="w-4 h-4" />} 인증 코드 발송
+                {loading ? <Spinner /> : <MailIcon className="w-4 h-4" />} 인증 코드 발송
               </button>
             </div>
           )}
@@ -287,7 +333,7 @@ export function SignupScreen() {
           {step === "verify" && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-amber/10 rounded-xl p-4 text-center">
-                <Mail className="w-8 h-8 text-amber mx-auto mb-2" />
+                <MailIcon className="w-8 h-8 text-amber mx-auto mb-2" />
                 <p className="text-sm font-medium text-foreground">{email}</p>
                 <p className="text-xs text-muted-foreground mt-1">위 이메일로 6자리 인증 코드를 발송했습니다.</p>
               </div>
@@ -301,7 +347,7 @@ export function SignupScreen() {
               {error && <p className="text-sm text-destructive">{error}</p>}
               <button onClick={handleVerify} disabled={loading || otp.length !== 6}
                 className="w-full h-12 inline-flex items-center justify-center gap-2 bg-amber text-white hover:bg-amber-dark shadow-warm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:pointer-events-none">
-                {loading ? <Spinner /> : <ArrowRight className="w-4 h-4" />} 인증 확인
+                {loading ? <Spinner /> : <Icon.ArrowRight className="w-4 h-4" />} 인증 확인
               </button>
               <div className="flex items-center justify-center gap-4 text-sm">
                 <button className="text-muted-foreground hover:text-amber transition-colors"
@@ -315,7 +361,7 @@ export function SignupScreen() {
           {step === "register" && (
             <form onSubmit={onSubmit} className="space-y-5 animate-fade-in">
               <div className="bg-green-50 rounded-xl p-3 flex items-center gap-2 text-green-700">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <CheckCircle2Icon className="w-4 h-4 flex-shrink-0" />
                 <span className="text-xs font-medium">이메일 인증 완료: {email}</span>
               </div>
 
@@ -328,7 +374,7 @@ export function SignupScreen() {
                   <button type="button" onClick={checkNick} disabled={nick.length < 2}
                     className="h-11 px-4 whitespace-nowrap inline-flex items-center justify-center rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50">중복확인</button>
                 </div>
-                {nickState === "ok" && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> 사용 가능한 닉네임이에요</p>}
+                {nickState === "ok" && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle2Icon className="w-3.5 h-3.5" /> 사용 가능한 닉네임이에요</p>}
                 {nickState === "dup" && <p className="text-xs text-destructive">이미 사용 중인 닉네임이에요</p>}
               </div>
 
@@ -340,11 +386,11 @@ export function SignupScreen() {
                     value={pw} onChange={(e) => setPw(e.target.value)} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                   </button>
                 </div>
                 <p className={`text-xs flex items-center gap-1 ${pwMet ? "text-primary" : "text-muted-foreground"}`}>
-                  {pwMet && <CheckCircle2 className="w-3.5 h-3.5" />} 영문 대·소문자 + 특수문자 포함 8–20자
+                  {pwMet && <CheckCircle2Icon className="w-3.5 h-3.5" />} 영문 대·소문자 + 특수문자 포함 8–20자
                 </p>
               </div>
 
@@ -355,7 +401,7 @@ export function SignupScreen() {
                     onClick={() => setAddrOpen(true)} className={`${INPUT} flex-1 cursor-pointer`} />
                   <button type="button" onClick={() => setAddrOpen(true)}
                     className="h-11 px-4 whitespace-nowrap inline-flex items-center justify-center gap-1 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors">
-                    <Search className="w-3.5 h-3.5" /> 검색
+                    <Icon.Search className="w-3.5 h-3.5" /> 검색
                   </button>
                 </div>
               </div>
