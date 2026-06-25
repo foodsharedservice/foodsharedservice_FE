@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; overflow: hidden;
+    background: #F7F6F2;
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    color: #1C1C1C;
+  }
+
+  .header {
+    background: #2D3B23;
+    color: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 56px;
+    height: 90px;
+  }
+  .header-left h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .header-left p { font-size: 13px; color: #9FB48E; margin-top: 4px; }
+  .header-stats { display: flex; gap: 40px; align-items: center; }
+  .stat { text-align: center; }
+  .stat-num { font-size: 34px; font-weight: 800; line-height: 1; }
+  .stat-label { font-size: 11px; color: #9FB48E; margin-top: 3px; }
+  .stat.done .stat-num { color: #7AB87A; }
+  .stat.prog .stat-num { color: #D4A848; }
+  .stat.plan .stat-num { color: #90A8D4; }
+  .deadline-chip {
+    background: #D4A848; color: #2D3B23;
+    padding: 8px 20px; border-radius: 8px;
+    font-size: 13px; font-weight: 700;
+  }
+
+  .body { display: flex; height: 990px; }
+
+  /* LEFT LEGEND */
+  .legend-panel {
+    width: 320px; min-width: 320px;
+    background: #FAFAF7;
+    border-right: 1px solid #DDD8CC;
+    display: flex; flex-direction: column;
+    padding: 28px 0 0;
+  }
+  .legend-title {
+    font-size: 11px; font-weight: 700; color: #8A8A7A;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0 28px 16px;
+    border-bottom: 1px solid #E8E4DA;
+  }
+  .phase-list { flex: 1; overflow: hidden; padding: 20px 0; }
+  .phase-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 28px;
+    cursor: default;
+    transition: background 0.1s;
+  }
+  .phase-item:hover { background: #F0EDE6; }
+  .phase-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .phase-info {}
+  .phase-name { font-size: 13.5px; font-weight: 600; color: #2D3B23; }
+  .phase-period { font-size: 11px; color: #9A9A8A; margin-top: 2px; }
+  .phase-status {
+    margin-left: auto; font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .ps-done { background: #E8F5E8; color: #4A8A4A; }
+  .ps-prog { background: #FEF3E2; color: #B8860B; }
+  .ps-plan { background: #E8EEF8; color: #4A6AA8; }
+
+  .divider { height: 1px; background: #E8E4DA; margin: 4px 28px; }
+
+  .legend-footer {
+    padding: 16px 28px;
+    border-top: 1px solid #E8E4DA;
+    font-size: 11px; color: #9A9A8A; line-height: 1.7;
+  }
+
+  /* RIGHT CHART */
+  .chart-panel {
+    flex: 1;
+    display: flex; flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .time-header {
+    display: flex;
+    background: #2D3B23;
+    color: #9FB48E;
+    font-size: 11.5px; font-weight: 600;
+    height: 40px;
+  }
+  .month-cell {
+    display: flex; align-items: center; justify-content: center;
+    border-right: 1px solid #3D4F30;
+    font-size: 12px; font-weight: 700; color: #CDE0B8;
+  }
+
+  .chart-body { flex: 1; position: relative; overflow: hidden; }
+
+  canvas#gantt { display: block; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <h1>FoodShare — 지역 기반 음식 공유 서비스</h1>
+    <p>2026년 5월 ~ 8월 전체 개발 로드맵 · 간략 버전</p>
+  </div>
+  <div class="header-stats">
+    <div class="stat done"><div class="stat-num">7</div><div class="stat-label">완료 단계</div></div>
+    <div class="stat prog"><div class="stat-num">1</div><div class="stat-label">진행중</div></div>
+    <div class="stat plan"><div class="stat-num">2</div><div class="stat-label">예정</div></div>
+    <div class="deadline-chip">v2 Deadline · 2026-06-24 ✓</div>
+  </div>
+</div>
+
+<div class="body">
+  <div class="legend-panel">
+    <div class="legend-title">개발 단계</div>
+    <div class="phase-list" id="phaseList"></div>
+    <div class="legend-footer">
+      ◆ 마일스톤 &nbsp;|&nbsp; 세로선 = TODAY (2026-06-25)<br>
+      BE = 백엔드 &nbsp;|&nbsp; FE = 프론트엔드
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <div class="time-header" id="timeHeader"></div>
+    <div class="chart-body">
+      <canvas id="gantt"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const TODAY = new Date('2026-06-25');
+const START = new Date('2026-05-01');
+const END   = new Date('2026-08-31');
+
+const phases = [
+  {
+    name: '인프라 & 환경 설정', period: '5/3 – 5/22', color: '#5B7A4A', status: 'done',
+    bars: [
+      { label: 'EC2 · Docker · 환경', start: '2026-05-03', end: '2026-05-09', type: 'be' },
+      { label: 'MySQL · Redis · S3', start: '2026-05-10', end: '2026-05-22', type: 'be' },
+      { label: 'Next.js 프로젝트 초기화', start: '2026-05-10', end: '2026-05-22', type: 'fe' },
+    ]
+  },
+  {
+    name: '인증 (Auth)', period: '5/10 – 6/7', color: '#7AB87A', status: 'done',
+    bars: [
+      { label: 'BE: 로그인·로그아웃·이메일인증·회원가입', start: '2026-05-10', end: '2026-06-01', type: 'be' },
+      { label: 'FE: 로그인·회원가입 화면', start: '2026-05-22', end: '2026-06-07', type: 'fe' },
+    ]
+  },
+  {
+    name: '음식 (Foods)', period: '5/22 – 6/28', color: '#4A7A5A', status: 'done',
+    bars: [
+      { label: 'BE: 목록·상세·등록·수정 + AI OCR', start: '2026-05-22', end: '2026-06-14', type: 'be' },
+      { label: 'FE: 홈·상세·등록·수정 화면', start: '2026-06-01', end: '2026-06-28', type: 'fe' },
+    ]
+  },
+  {
+    name: '나눔 요청 (Requests)', period: '6/1 – 6/28', color: '#3A6A7A', status: 'done',
+    bars: [
+      { label: 'BE: POST·GET·PATCH·DELETE', start: '2026-06-01', end: '2026-06-14', type: 'be' },
+      { label: 'FE: 요청·승인·거절·목록 화면', start: '2026-06-07', end: '2026-06-28', type: 'fe' },
+    ]
+  },
+  {
+    name: '채팅 (Chat)', period: '6/8 – 7/15', color: '#5A4A7A', status: 'prog',
+    bars: [
+      { label: 'BE: 채팅방·STOMP WebSocket', start: '2026-06-08', end: '2026-06-21', type: 'be' },
+      { label: 'FE: 채팅 목록·실시간 채팅', start: '2026-06-14', end: '2026-07-05', type: 'fe' },
+      { label: 'BE: 읽음 처리·안 읽은 메시지 (예정)', start: '2026-07-05', end: '2026-07-15', type: 'plan' },
+    ]
+  },
+  {
+    name: '지역 기반 V2', period: '6/5 – 6/24', color: '#8A5A3A', status: 'done',
+    bars: [
+      { label: 'BE·FE: 사전 분석 & API 명세', start: '2026-06-05', end: '2026-06-07', type: 'be' },
+      { label: 'BE: Region TDD (RED→GREEN)', start: '2026-06-07', end: '2026-06-13', type: 'be' },
+      { label: 'BE: Food V2 TDD (regionId 추가)', start: '2026-06-13', end: '2026-06-21', type: 'be' },
+      { label: 'BE: 검증 & 배포 ✓ DEADLINE', start: '2026-06-23', end: '2026-06-24', type: 'be' },
+    ]
+  },
+  {
+    name: '통합 QA & 안정화', period: '7/1 – 7/31', color: '#3A5A7A', status: 'plan',
+    bars: [
+      { label: 'BE·FE: 전체 통합 테스트', start: '2026-07-01', end: '2026-07-15', type: 'be' },
+      { label: 'FE: 성능 최적화·버그 수정', start: '2026-07-10', end: '2026-07-31', type: 'fe' },
+    ]
+  },
+  {
+    name: '정식 출시', period: '8/1 – 8/31', color: '#D4A848', status: 'plan',
+    bars: [
+      { label: 'BE·FE: 모니터링·운영 안정화', start: '2026-08-01', end: '2026-08-25', type: 'be' },
+      { label: 'FE: 추가 기능 개발', start: '2026-08-01', end: '2026-08-31', type: 'fe' },
+    ]
+  },
+];
+
+const milestones = [
+  { date: '2026-06-01', label: 'BE API v1', color: '#5B7A4A' },
+  { date: '2026-06-24', label: 'v2 Deadline ✓', color: '#D4A848' },
+  { date: '2026-06-25', label: 'FE v1 완성', color: '#4A5D3A' },
+  { date: '2026-07-15', label: '통합 QA', color: '#3A6A8A' },
+  { date: '2026-08-25', label: '정식 출시', color: '#8A3A3A' },
+];
+
+// Status label colors
+const STATUS_CLS = { done: ['#E8F5E8','#4A8A4A','완료'], prog: ['#FEF3E2','#B8860B','진행중'], plan: ['#E8EEF8','#4A6AA8','예정'] };
+
+// Build phase legend
+const phaseList = document.getElementById('phaseList');
+phases.forEach((p, i) => {
+  if (i > 0 && i % 1 === 0) {
+    // tiny gap
+  }
+  const [bg, fc, label] = STATUS_CLS[p.status];
+  phaseList.innerHTML += `
+    <div class="phase-item">
+      <div class="phase-dot" style="background:${p.color}"></div>
+      <div class="phase-info">
+        <div class="phase-name">${p.name}</div>
+        <div class="phase-period">${p.period}</div>
+      </div>
+      <span class="phase-status" style="background:${bg};color:${fc}">${label}</span>
+    </div>`;
+});
+
+// Time header months
+const totalDays = (END - START) / 86400000 + 1;
+const headerEl = document.getElementById('timeHeader');
+const chartPanelWidth = 1920 - 320;
+let mo = new Date(START.getFullYear(), START.getMonth(), 1);
+while (mo <= END) {
+  const mStart = mo < START ? START : mo;
+  const mEnd = new Date(mo.getFullYear(), mo.getMonth()+1, 0);
+  const mEndClamped = mEnd > END ? END : mEnd;
+  const dStart = (mStart - START) / 86400000;
+  const dEnd = (mEndClamped - START) / 86400000 + 1;
+  const w = (dEnd - dStart) / totalDays * chartPanelWidth;
+  const names = ['May','Jun','Jul','Aug','Sep'];
+  const mName = names[mo.getMonth() - 4] || mo.toLocaleString('en',{month:'short'});
+  headerEl.innerHTML += `<div class="month-cell" style="width:${w}px;flex-shrink:0">${mName} ${mo.getFullYear()}</div>`;
+  mo = new Date(mo.getFullYear(), mo.getMonth()+1, 1);
+}
+
+// Canvas chart
+const canvas = document.getElementById('gantt');
+const bodyH = 990 - 40; // subtract time header
+const ROW_H = 80; // per phase
+const PAD = 10;
+const BAR_H = 22;
+const LABEL_COL = 0; // no label col in chart (legend on left)
+
+canvas.width = chartPanelWidth;
+canvas.height = bodyH;
+
+const ctx = canvas.getContext('2d');
+
+function dateToX(dateStr) {
+  const d = new Date(dateStr);
+  const days = (d - START) / 86400000;
+  return days / totalDays * chartPanelWidth;
+}
+
+function drawRoundRect(x, y, w, h, r, fill) {
+  if (w < 2) w = 2;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+const BAR_COLORS = {
+  be: { fill: '#5B8A4A', text: '#fff' },
+  fe: { fill: '#4A7A9B', text: '#fff' },
+  plan: { fill: '#B0B8C8', text: '#555' },
+};
+
+// Grid lines (months)
+mo = new Date(START.getFullYear(), START.getMonth(), 1);
+ctx.strokeStyle = '#E2DECF';
+ctx.lineWidth = 1;
+while (mo <= END) {
+  const x = dateToX(mo.toISOString().slice(0,10));
+  ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, bodyH); ctx.stroke();
+  mo = new Date(mo.getFullYear(), mo.getMonth()+1, 1);
+}
+
+// Phase rows
+phases.forEach((phase, pi) => {
+  const rowY = pi * ROW_H;
+
+  // Row background alternating
+  ctx.fillStyle = pi % 2 === 0 ? '#FAFAF7' : '#F3F1EA';
+  ctx.fillRect(0, rowY, chartPanelWidth, ROW_H);
+
+  // Phase color stripe on left
+  ctx.fillStyle = phase.color;
+  ctx.fillRect(0, rowY, 4, ROW_H);
+
+  // Phase name label
+  ctx.font = '600 12px system-ui, sans-serif';
+  ctx.fillStyle = '#2D3B23';
+  ctx.fillText(phase.name, 12, rowY + 16);
+
+  // Bars
+  const barsCount = phase.bars.length;
+  phase.bars.forEach((bar, bi) => {
+    const x = dateToX(bar.start);
+    const x2 = dateToX(bar.end);
+    const w = Math.max(x2 - x, 4);
+    const bY = rowY + 22 + bi * (BAR_H + 4);
+    const col = BAR_COLORS[bar.type] || BAR_COLORS.be;
+    drawRoundRect(x, bY, w, BAR_H, 4, col.fill);
+
+    // Label inside bar if wide enough
+    if (w > 80) {
+      ctx.font = '500 10px system-ui, sans-serif';
+      ctx.fillStyle = col.text;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x + 6, bY, w - 8, BAR_H);
+      ctx.clip();
+      ctx.fillText(bar.label, x + 6, bY + 14);
+      ctx.restore();
+    }
+  });
+
+  // Row border
+  ctx.strokeStyle = '#DDD8CC';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(0, rowY + ROW_H); ctx.lineTo(chartPanelWidth, rowY + ROW_H); ctx.stroke();
+});
+
+// Milestones row
+const msY = phases.length * ROW_H;
+ctx.fillStyle = '#F0EDE3';
+ctx.fillRect(0, msY, chartPanelWidth, 60);
+ctx.font = '700 11px system-ui, sans-serif';
+ctx.fillStyle = '#5A5A4A';
+ctx.fillText('마일스톤', 12, msY + 20);
+
+milestones.forEach(ms => {
+  const x = dateToX(ms.date);
+  // Diamond
+  ctx.save();
+  ctx.translate(x, msY + 38);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = ms.color;
+  ctx.fillRect(-6, -6, 12, 12);
+  ctx.restore();
+  // Label
+  ctx.font = '600 10px system-ui, sans-serif';
+  ctx.fillStyle = ms.color;
+  ctx.fillText(ms.label, x - 20, msY + 56);
+});
+
+// TODAY line
+const todayX = dateToX('2026-06-25');
+ctx.save();
+ctx.strokeStyle = '#E85D3A';
+ctx.lineWidth = 2;
+ctx.setLineDash([6, 4]);
+ctx.beginPath(); ctx.moveTo(todayX, 0); ctx.lineTo(todayX, bodyH); ctx.stroke();
+ctx.restore();
+
+// TODAY label
+ctx.fillStyle = '#E85D3A';
+ctx.font = '700 11px system-ui';
+ctx.fillText('TODAY', todayX + 4, 14);
+
+// v2 deadline line
+const dlX = dateToX('2026-06-24');
+ctx.save();
+ctx.strokeStyle = '#D4A848';
+ctx.lineWidth = 2;
+ctx.setLineDash([4, 3]);
+ctx.beginPath(); ctx.moveTo(dlX, 0); ctx.lineTo(dlX, bodyH); ctx.stroke();
+ctx.restore();
+</script>
+</body>
+</html>
