@@ -3,80 +3,76 @@
 <head>
 <meta charset="UTF-8">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    width:1920px; height:1080px; overflow:hidden;
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    width:1920px;height:1080px;overflow:hidden;
     background:#F7F6F2;
     font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
     color:#1C1C1C;
   }
-  .header {
-    background:#2D3B23; color:#fff;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:0 52px; height:72px;
+  .header{
+    background:#2D3B23;color:#fff;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 52px;height:72px;
   }
-  .header-left h1 { font-size:22px; font-weight:800; letter-spacing:-.5px; }
-  .header-left p  { font-size:11px; color:#9FB48E; margin-top:3px; }
-  .hstats { display:flex; gap:32px; align-items:center; }
-  .st { text-align:center; }
-  .sn { font-size:30px; font-weight:800; line-height:1; }
-  .sl { font-size:10px; color:#9FB48E; margin-top:3px; }
-  .st.done .sn{color:#7AB87A;} .st.prog .sn{color:#D4A848;} .st.plan .sn{color:#90A8D4;}
-  .sep { width:1px; height:32px; background:rgba(255,255,255,.15); }
-  .dl-chip { background:#D4A848; color:#2D3B23; padding:7px 16px; border-radius:7px; font-size:12.5px; font-weight:800; }
+  .header-left h1{font-size:22px;font-weight:800;letter-spacing:-.5px;}
+  .header-left p{font-size:11px;color:#9FB48E;margin-top:3px;}
+  .hstats{display:flex;gap:32px;align-items:center;}
+  .st{text-align:center;}
+  .sn{font-size:28px;font-weight:800;line-height:1;}
+  .sl{font-size:10px;color:#9FB48E;margin-top:3px;}
+  .st.done .sn{color:#7AB87A;} .st.days .sn{color:#CDE0B8;}
+  .sep{width:1px;height:32px;background:rgba(255,255,255,.15);}
+  .dl-chip{background:#D4A848;color:#2D3B23;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:800;}
 
-  .body { display:flex; height:1008px; }
+  .body{display:flex;height:1008px;}
 
-  /* 좌측 범례 패널 */
-  .leg-panel {
-    width:280px; min-width:280px;
-    background:#FAFAF7; border-right:1px solid #DDD8CC;
-    display:flex; flex-direction:column; padding:20px 0 0;
+  .leg-panel{
+    width:260px;min-width:260px;
+    background:#FAFAF7;border-right:1px solid #DDD8CC;
+    display:flex;flex-direction:column;padding:20px 0 0;
   }
-  .leg-title { font-size:9.5px; font-weight:700; color:#8A8A7A; letter-spacing:.1em; text-transform:uppercase; padding:0 22px 12px; border-bottom:1px solid #E8E4DA; }
-  .plist { flex:1; overflow:hidden; padding:10px 0; }
-  .pi { display:flex; align-items:center; gap:10px; padding:9px 22px; }
-  .pdot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-  .pname { font-size:12px; font-weight:600; color:#2D3B23; }
-  .pperiod { font-size:9.5px; color:#9A9A8A; margin-top:1px; }
-  .pst { margin-left:auto; font-size:8.5px; font-weight:700; padding:2px 6px; border-radius:8px; flex-shrink:0; }
-  .ps-d{background:#E8F5E8;color:#4A8A4A;} .ps-p{background:#FEF3E2;color:#B8860B;} .ps-n{background:#E8EEF8;color:#4A6AA8;}
-  .leg-footer { padding:12px 22px; border-top:1px solid #E8E4DA; font-size:9.5px; color:#9A9A8A; line-height:1.7; }
+  .leg-title{font-size:9.5px;font-weight:700;color:#8A8A7A;letter-spacing:.1em;text-transform:uppercase;padding:0 20px 12px;border-bottom:1px solid #E8E4DA;}
+  .plist{flex:1;overflow:hidden;padding:10px 0;}
+  .pi{display:flex;align-items:center;gap:10px;padding:9px 20px;}
+  .pdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .pname{font-size:12px;font-weight:600;color:#2D3B23;}
+  .pperiod{font-size:9.5px;color:#9A9A8A;margin-top:1px;}
+  .pst{margin-left:auto;font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:8px;flex-shrink:0;}
+  .ps-d{background:#E8F5E8;color:#4A8A4A;} .ps-p{background:#FEF3E2;color:#B8860B;}
+  .leg-footer{padding:12px 20px;border-top:1px solid #E8E4DA;font-size:9.5px;color:#9A9A8A;line-height:1.7;}
 
-  /* 우측 차트 */
-  .chart-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-  .t-mo { display:flex; background:#2D3B23; height:22px; flex-shrink:0; }
-  .t-wk { display:flex; background:#374A29; height:17px; flex-shrink:0; }
-  .t-dy { display:flex; background:#F0EDE6; height:14px; border-bottom:2px solid #C0BAA8; flex-shrink:0; }
-  .mo-cell { display:flex; align-items:center; justify-content:center; border-right:1px solid #3D5030; font-size:11px; font-weight:800; color:#CDE0B8; flex-shrink:0; overflow:hidden; }
-  .wk-cell { display:flex; align-items:center; justify-content:center; border-right:1px solid rgba(255,255,255,.1); font-size:7.5px; color:rgba(255,255,255,.5); flex-shrink:0; overflow:hidden; }
-  .dy-cell { border-left:1px solid #E2DECF; flex-shrink:0; position:relative; display:flex; align-items:center; }
-  .dy-cell.mo-day { border-left:1px solid #B0A898; background:rgba(0,0,0,.02); }
-  .dy-cell.first  { border-left:2px solid #9A9280; }
-  .dy-cell.td-day { background:rgba(184,60,40,.1); border-left:1.5px solid rgba(184,60,40,.5); }
-  .dy-num { font-size:7px; color:#A8A298; padding-left:1px; line-height:1; }
-  .dy-num.mo { color:#5A5443; font-weight:700; }
-  .dy-num.td { color:#C04030; font-weight:800; }
-  .dy-num.first-d { color:#3A3428; font-weight:800; }
+  .chart-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .t-mo{display:flex;background:#2D3B23;height:24px;flex-shrink:0;}
+  .t-wk{display:flex;background:#374A29;height:19px;flex-shrink:0;}
+  .t-dy{display:flex;background:#F2EFE8;height:17px;border-bottom:2px solid #B0A898;flex-shrink:0;}
+  .mo-cell{display:flex;align-items:center;justify-content:center;border-right:1px solid #3D5030;font-size:12px;font-weight:800;color:#CDE0B8;flex-shrink:0;overflow:hidden;}
+  .wk-cell{display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.1);font-size:8.5px;color:rgba(255,255,255,.6);font-weight:600;flex-shrink:0;overflow:hidden;}
+  .dy-cell{border-left:1px solid #E2DECF;flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;}
+  .dy-cell.mo{border-left:1.5px solid #B0A898;background:rgba(0,0,0,.02);}
+  .dy-cell.f1{border-left:2px solid #9A9080;}
+  .dy-cell.we{background:rgba(0,0,0,.025);}
+  .dy-cell.last{background:rgba(212,168,72,.1);border-right:2.5px solid rgba(212,168,72,.8);}
+  .dy-num{font-size:8.5px;color:#A0988E;font-weight:400;}
+  .dy-num.mo-n{color:#5A5443;font-weight:700;}
+  .dy-num.last-n{color:#B8900B;font-weight:800;}
 
-  .chart-body { flex:1; position:relative; overflow:hidden; }
-  canvas#gc { display:block; }
+  .chart-body{flex:1;position:relative;overflow:hidden;}
+  canvas#gc{display:block;}
 </style>
 </head>
 <body>
 <div class="header">
   <div class="header-left">
     <h1>FoodShare — 지역 기반 음식 공유 서비스</h1>
-    <p>2026년 5/21 ~ 8/31 전체 개발 로드맵 · 간략 버전</p>
+    <p>개발 완료 기간 · 2026년 5/21 ~ 6/24 · 간략 버전</p>
   </div>
   <div class="hstats">
-    <div class="st done"><div class="sn">8</div><div class="sl">완료 단계</div></div>
+    <div class="st done"><div class="sn">10</div><div class="sl">완료 단계</div></div>
     <div class="sep"></div>
-    <div class="st prog"><div class="sn">1</div><div class="sl">진행중</div></div>
+    <div class="st days"><div class="sn">35</div><div class="sl">개발 일수</div></div>
     <div class="sep"></div>
-    <div class="st plan"><div class="sn">2</div><div class="sl">예정</div></div>
-    <div class="sep"></div>
-    <div class="dl-chip">v2 Deadline · 2026-06-24 ✓</div>
+    <div class="dl-chip">🏁 v2 배포 완료 · 2026-06-24</div>
   </div>
 </div>
 
@@ -86,8 +82,8 @@
     <div class="plist" id="plist"></div>
     <div class="leg-footer">
       ◆ 마일스톤<br>
-      <span style="color:#B14A3C;font-weight:700;">붉은 점선</span> = TODAY (2026-06-25)<br>
-      <span style="color:#B8900B;font-weight:700;">노란 점선</span> = v2 Deadline (2026-06-24)<br>
+      <span style="color:#B8900B;font-weight:700;">노란선</span> = 6/24 v2 배포 완료<br>
+      주말 = 연한 회색 배경<br>
       BE = 백엔드 &nbsp;|&nbsp; FE = 프론트엔드
     </div>
   </div>
@@ -103,106 +99,112 @@
 </div>
 
 <script>
-const START  = new Date('2026-05-21');
-const END    = new Date('2026-08-31');
-const DAYS   = Math.round((END-START)/86400000)+1; // 103
-const chartW = 1920 - 280;
+const START = new Date('2026-05-21');
+const END   = new Date('2026-06-24');
+const DAYS  = Math.round((END-START)/86400000)+1; // 35
+const chartW = 1920-260;
 
-function dx(dateStr){ return ((new Date(dateStr)-START)/86400000/DAYS)*chartW; }
+function dx(dateStr){
+  const d=new Date(dateStr);
+  const clamped=Math.min(Math.max(+d,+START),+END);
+  return ((clamped-START)/86400000/DAYS)*chartW;
+}
+function dw(s,e){
+  const ms=Math.max(+new Date(s),+START);
+  const me=Math.min(+new Date(e),+END);
+  return Math.max(2,(me-ms)/86400000/DAYS*chartW);
+}
 
-const phases = [
-  { name:'명세 정의 & 기획', period:'5/21 – 5/25', color:'#8A6A9A', status:'done',
-    bars:[
-      {label:'요구사항·API 명세·DB 스키마', start:'2026-05-21', end:'2026-05-24', type:'sp'},
-      {label:'FE 와이어프레임', start:'2026-05-23', end:'2026-05-25', type:'fe'},
-    ]},
-  { name:'인프라 & 환경 설정', period:'5/24 – 6/5', color:'#5B7A4A', status:'done',
-    bars:[
-      {label:'EC2·Docker·MySQL·Redis·S3', start:'2026-05-24', end:'2026-06-02', type:'be'},
-      {label:'Next.js 초기화', start:'2026-05-24', end:'2026-05-28', type:'fe'},
-      {label:'CORS·세션 쿠키 (이슈)', start:'2026-05-29', end:'2026-06-05', type:'is'},
-    ]},
-  { name:'인증 (Auth)', period:'5/28 – 6/10', color:'#7AB87A', status:'done',
-    bars:[
-      {label:'BE: 로그인·로그아웃·이메일인증·회원가입', start:'2026-05-28', end:'2026-06-07', type:'be'},
-      {label:'FE: 로그인·회원가입 화면', start:'2026-06-03', end:'2026-06-10', type:'fe'},
-    ]},
-  { name:'음식 (Foods)', period:'6/3 – 6/25', color:'#4A7A5A', status:'done',
-    bars:[
-      {label:'BE: 목록·상세·등록·수정 + AI OCR', start:'2026-06-03', end:'2026-06-15', type:'be'},
-      {label:'FE: 홈·상세·등록·수정 화면', start:'2026-06-08', end:'2026-06-25', type:'fe'},
-    ]},
-  { name:'나눔 요청 (Requests)', period:'6/12 – 6/25', color:'#3A6A7A', status:'done',
-    bars:[
-      {label:'BE: POST·GET·PATCH·DELETE', start:'2026-06-12', end:'2026-06-18', type:'be'},
-      {label:'FE: 요청·승인·거절·목록', start:'2026-06-16', end:'2026-06-25', type:'fe'},
-    ]},
-  { name:'채팅 (Chat)', period:'6/15 – 7/18', color:'#5A4A7A', status:'prog',
-    bars:[
-      {label:'BE: 채팅방·STOMP WebSocket', start:'2026-06-15', end:'2026-06-24', type:'be'},
-      {label:'FE: 채팅 목록·실시간 채팅', start:'2026-06-20', end:'2026-07-01', type:'fe'},
-      {label:'BE: 읽음 처리 (예정)', start:'2026-07-05', end:'2026-07-18', type:'plan'},
-    ]},
-  { name:'지역 기반 V2', period:'6/5 – 6/24', color:'#8A5A3A', status:'done',
-    bars:[
-      {label:'사전 분석 & API 명세', start:'2026-06-05', end:'2026-06-07', type:'be'},
-      {label:'Region TDD (RED→GREEN)', start:'2026-06-07', end:'2026-06-13', type:'be'},
-      {label:'Food V2 TDD (regionId)', start:'2026-06-13', end:'2026-06-21', type:'be'},
-      {label:'검증 & 배포 ✓ DEADLINE', start:'2026-06-23', end:'2026-06-24', type:'be'},
-    ]},
-  { name:'QA & 배포', period:'6/18 – 7/14', color:'#4A5D7A', status:'prog',
-    bars:[
-      {label:'Vercel 배포', start:'2026-06-18', end:'2026-06-21', type:'fe'},
-      {label:'EC2 백엔드 배포 안정화', start:'2026-06-22', end:'2026-07-10', type:'ip'},
-      {label:'포스트맨 API 테스트', start:'2026-06-23', end:'2026-07-05', type:'be'},
-      {label:'모바일 반응형 QA', start:'2026-07-01', end:'2026-07-14', type:'fe'},
-    ]},
-  { name:'통합 QA & 안정화', period:'7/15 – 7/31', color:'#3A5A7A', status:'plan',
-    bars:[
-      {label:'BE·FE: 전체 통합 테스트', start:'2026-07-15', end:'2026-07-31', type:'be'},
-    ]},
-  { name:'정식 출시', period:'8/1 – 8/31', color:'#D4A848', status:'plan',
-    bars:[
-      {label:'모니터링·운영 안정화', start:'2026-08-01', end:'2026-08-25', type:'be'},
-      {label:'FE: 추가 기능 개발', start:'2026-08-01', end:'2026-08-31', type:'fe'},
-    ]},
+const phases=[
+  {name:'명세 정의 & 기획',  period:'5/21 – 5/25', color:'#7A5A8A', status:'done',
+   bars:[
+     {label:'요구사항·API 명세·DB 스키마', start:'2026-05-21',end:'2026-05-24',type:'sp'},
+     {label:'FE 와이어프레임',              start:'2026-05-23',end:'2026-05-25',type:'fe'},
+   ]},
+  {name:'인프라 & 환경 설정', period:'5/24 – 6/5', color:'#5B7A4A', status:'done',
+   bars:[
+     {label:'EC2·Docker·MySQL·Redis',      start:'2026-05-24',end:'2026-05-31',type:'be'},
+     {label:'AWS S3 이미지 스토리지',      start:'2026-05-28',end:'2026-06-02',type:'be'},
+     {label:'Next.js 초기화',              start:'2026-05-24',end:'2026-05-28',type:'fe'},
+     {label:'CORS·세션 쿠키 (이슈)',       start:'2026-05-29',end:'2026-06-05',type:'is'},
+   ]},
+  {name:'인증 (Auth)',         period:'5/28 – 6/10', color:'#7AB87A', status:'done',
+   bars:[
+     {label:'BE: 로그인·로그아웃·이메일인증·회원가입', start:'2026-05-28',end:'2026-06-07',type:'be'},
+     {label:'FE: 로그인·회원가입 화면',               start:'2026-06-03',end:'2026-06-10',type:'fe'},
+   ]},
+  {name:'음식 (Foods)',        period:'6/3 – 6/24',  color:'#4A7A5A', status:'done',
+   bars:[
+     {label:'BE: 목록·상세·등록·수정 + AI OCR', start:'2026-06-03',end:'2026-06-15',type:'be'},
+     {label:'FE: 홈·상세·등록·수정 화면',       start:'2026-06-08',end:'2026-06-24',type:'fe'},
+   ]},
+  {name:'나눔 요청 (Requests)',period:'6/12 – 6/24', color:'#3A6A7A', status:'done',
+   bars:[
+     {label:'BE: POST·GET·PATCH·DELETE', start:'2026-06-12',end:'2026-06-18',type:'be'},
+     {label:'FE: 요청·승인·거절·목록',  start:'2026-06-16',end:'2026-06-24',type:'fe'},
+   ]},
+  {name:'채팅 (Chat)',         period:'6/15 – 6/24', color:'#5A4A7A', status:'done',
+   bars:[
+     {label:'BE: 채팅방·STOMP WebSocket', start:'2026-06-15',end:'2026-06-24',type:'be'},
+     {label:'FE: 채팅 목록·실시간 채팅', start:'2026-06-20',end:'2026-06-24',type:'fe'},
+   ]},
+  {name:'지역 기반 V2 — 분석', period:'6/5 – 6/7',  color:'#9A6A4A', status:'done',
+   bars:[
+     {label:'브랜치 현황 & API 명세 검토', start:'2026-06-05',end:'2026-06-06',type:'be'},
+     {label:'Food 엔티티 영향 분석',       start:'2026-06-06',end:'2026-06-07',type:'be'},
+   ]},
+  {name:'지역 기반 V2 — Region TDD', period:'6/7 – 6/13', color:'#7A5A3A', status:'done',
+   bars:[
+     {label:'RegionRepo TEST(RED)→구현(GREEN)', start:'2026-06-07',end:'2026-06-09',type:'be'},
+     {label:'RegionService TEST→구현',           start:'2026-06-09',end:'2026-06-11',type:'be'},
+     {label:'RegionController TEST→구현',        start:'2026-06-11',end:'2026-06-13',type:'be'},
+   ]},
+  {name:'지역 기반 V2 — Food v2 TDD', period:'6/13 – 6/21', color:'#8A5A2A', status:'done',
+   bars:[
+     {label:'Food 엔티티 regionId 추가',     start:'2026-06-13',end:'2026-06-14',type:'be'},
+     {label:'FoodV2Repository TEST→구현',    start:'2026-06-14',end:'2026-06-16',type:'be'},
+     {label:'FoodV2Service TEST→구현',       start:'2026-06-16',end:'2026-06-18',type:'be'},
+     {label:'FoodV2Controller→Facade→구현', start:'2026-06-18',end:'2026-06-21',type:'be'},
+   ]},
+  {name:'지역 기반 V2 — 검증·배포', period:'6/23 – 6/24', color:'#D4A848', status:'done',
+   bars:[
+     {label:'전체 테스트 257개 통과', start:'2026-06-23',end:'2026-06-24',type:'be'},
+     {label:'Vercel·EC2 배포 완료 🏁', start:'2026-06-24',end:'2026-06-24',type:'fe'},
+   ]},
 ];
 
-const milestones = [
-  {date:'2026-06-01', label:'인프라 완료', color:'#5B7A4A'},
-  {date:'2026-06-15', label:'BE API v1',  color:'#4A7A5A'},
-  {date:'2026-06-24', label:'v2 Deadline ✓', color:'#D4A848'},
-  {date:'2026-06-25', label:'FE v1 완성', color:'#4A5D3A'},
-  {date:'2026-07-15', label:'통합 QA',   color:'#3A6A8A'},
-  {date:'2026-08-25', label:'정식 출시', color:'#8A3A3A'},
+const milestones=[
+  {date:'2026-05-25',label:'기획 완료',   color:'#7A5A8A'},
+  {date:'2026-06-01',label:'인프라 완료', color:'#5B7A4A'},
+  {date:'2026-06-10',label:'Auth 완료',   color:'#5A8A7A'},
+  {date:'2026-06-15',label:'BE API v1',   color:'#4A7A5A'},
+  {date:'2026-06-24',label:'🏁 v2 배포 완료', color:'#D4A848'},
 ];
 
-const STATUS_INFO = {done:['#E8F5E8','#4A8A4A','완료'],prog:['#FEF3E2','#B8860B','진행중'],plan:['#E8EEF8','#4A6AA8','예정']};
+const STATUS_INFO={done:['#E8F5E8','#4A8A4A','완료'],prog:['#FEF3E2','#B8860B','진행중']};
 
-// 일별
-const allDays = [];
-for (let i=0; i<DAYS; i++) {
+/* ── 일별 ── */
+const allDays=[];
+for(let i=0;i<DAYS;i++){
   const d=new Date(START); d.setDate(START.getDate()+i);
   allDays.push({
-    d, dn:d.getDate(),
-    x:(i/DAYS)*chartW, w:(1/DAYS)*chartW,
-    isMo:d.getDay()===1, isSu:d.getDay()===0,
-    isTd:d.toISOString().slice(0,10)==='2026-06-25',
-    isDL:d.toISOString().slice(0,10)==='2026-06-24',
-    isF1:d.getDate()===1,
+    dn:d.getDate(), x:(i/DAYS)*chartW, w:(1/DAYS)*chartW,
+    isMo:d.getDay()===1, isSat:d.getDay()===6, isSun:d.getDay()===0,
+    isF1:d.getDate()===1, isLast:i===DAYS-1,
+    dateStr:d.toISOString().slice(0,10),
   });
 }
 
-// 월
+/* ── 월 ── */
 const months=[]; let mc=new Date(START.getFullYear(),START.getMonth(),1);
 while(mc<=END){
   const y=mc.getFullYear(),m=mc.getMonth();
   const ms2=new Date(y,m,1),me=new Date(y,m+1,0);
   const s2=Math.max(+START,+ms2),e2=Math.min(+END,+me);
-  if(s2<=e2) months.push({l:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep'][m],x:((s2-START)/86400000/DAYS)*chartW,w:((e2-s2+1)/DAYS)*chartW});
+  if(s2<=e2) months.push({l:['Jan','Feb','Mar','Apr','May','Jun'][m],x:((s2-START)/86400000/DAYS)*chartW,w:((e2-s2+1)/DAYS)*chartW});
   mc=new Date(y,m+1,1);
 }
-// 주
+/* ── 주 ── */
 const weeks=[]; let wc=new Date(START);
 while(wc.getDay()!==1) wc.setDate(wc.getDate()+1);
 while(wc<=END){
@@ -212,85 +214,72 @@ while(wc<=END){
   wc.setDate(wc.getDate()+7);
 }
 
-// ── Legend ──
-const plistEl=document.getElementById('plist');
+/* ── Legend ── */
+const pl=document.getElementById('plist');
 phases.forEach(p=>{
-  const [bg,fc,lbl]=STATUS_INFO[p.status]||STATUS_INFO.plan;
-  plistEl.innerHTML+=`<div class="pi"><div class="pdot" style="background:${p.color}"></div><div style="flex:1;min-width:0"><div class="pname">${p.name}</div><div class="pperiod">${p.period}</div></div><span class="pst" style="background:${bg};color:${fc}">${lbl}</span></div>`;
+  const [bg,fc,lbl]=STATUS_INFO[p.status]||STATUS_INFO.done;
+  pl.innerHTML+=`<div class="pi"><div class="pdot" style="background:${p.color}"></div><div style="flex:1;min-width:0"><div class="pname">${p.name}</div><div class="pperiod">${p.period}</div></div><span class="pst" style="background:${bg};color:${fc}">${lbl}</span></div>`;
 });
 
-// ── 월 헤더 ──
+/* ── 월 헤더 ── */
 const tmo=document.getElementById('tmo');
-months.forEach(m=>{
-  const d=document.createElement('div'); d.className='mo-cell';
-  d.style.cssText=`width:${m.w}px;`;
-  d.textContent=m.l+' 2026';
-  tmo.appendChild(d);
-});
+months.forEach(m=>{const d=document.createElement('div');d.className='mo-cell';d.style.cssText=`width:${m.w}px;`;d.textContent=m.l+' 2026';tmo.appendChild(d);});
 
-// ── 주 헤더 ──
+/* ── 주 헤더 ── */
 const twk=document.getElementById('twk');
-weeks.forEach(w2=>{
-  const d=document.createElement('div'); d.className='wk-cell';
-  d.style.cssText=`width:${w2.w}px;`;
-  d.textContent=`${w2.d.getMonth()+1}/${w2.d.getDate()}`;
-  twk.appendChild(d);
-});
+weeks.forEach(w2=>{const d=document.createElement('div');d.className='wk-cell';d.style.cssText=`width:${w2.w}px;`;d.textContent=`${w2.d.getMonth()+1}/${w2.d.getDate()} W`;twk.appendChild(d);});
 
-// ── 일 헤더 ──
+/* ── 일 헤더 (35일 → 전체 표시) ── */
 const tdy=document.getElementById('tdy');
-const dlX=dx('2026-06-24'), tdX=dx('2026-06-25');
-
 allDays.forEach(day=>{
   const div=document.createElement('div');
-  let cls='dy-cell'+(day.isMo?' mo-day':'')+(day.isF1?' first':'')+(day.isTd?' td-day':'');
-  div.className=cls;
-  div.style.cssText=`width:${day.w}px;`;
-  if(day.dn===1||day.dn%2===1){
-    const sp=document.createElement('span');
-    sp.className='dy-num'+(day.isTd?' td':day.isF1?' first-d':day.isMo?' mo':'');
-    sp.textContent=day.dn;
-    div.appendChild(sp);
-  }
+  const we=day.isSat||day.isSun;
+  let cls='dy-cell'+(day.isMo?' mo':'')+(day.isF1?' f1':'')+(we?' we':'')+(day.isLast?' last':'');
+  div.className=cls; div.style.cssText=`width:${day.w}px;`;
+  const sp=document.createElement('span');
+  sp.className='dy-num'+(day.isLast?' last-n':day.isMo?' mo-n':'');
+  sp.textContent=day.dn;
+  div.appendChild(sp);
   tdy.appendChild(div);
 });
 
-// ── Canvas ──
+/* ── Canvas ── */
 const canvas=document.getElementById('gc');
-const bodyH=1080-72-22-17-14;
+const bodyH=1080-72-24-19-17;
 canvas.width=chartW; canvas.height=bodyH;
 const ctx=canvas.getContext('2d');
 
-const ROW_H=85, BAR_H=19;
+const ROW_H=Math.floor(bodyH/phases.length)-1;
+const BAR_H=Math.min(22,Math.floor((ROW_H-18)/phases[7].bars.length)-3); // dynamic
 
 const BCOL={
   be:{fill:'#4A6A3A',text:'#fff'},
   fe:{fill:'#4A7A9B',text:'#fff'},
-  sp:{fill:'#7A5A8A',text:'#fff'},
+  sp:{fill:'#6A4A7A',text:'#fff'},
   ip:{fill:'#C4963A',text:'#fff'},
   is:{fill:'#B14A3C',text:'#fff'},
-  plan:{fill:'#B0B8C8',text:'#555'},
 };
 
 function rr(x,y,w,h,r,fill){
   if(w<2)w=2; r=Math.min(r,w/2,h/2);
   ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
-  ctx.closePath(); ctx.fillStyle=fill; ctx.fill();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();ctx.fillStyle=fill;ctx.fill();
 }
 
 // 배경
-ctx.fillStyle='#FAFAF7'; ctx.fillRect(0,0,chartW,bodyH);
+ctx.fillStyle='#FAFAF7';ctx.fillRect(0,0,chartW,bodyH);
 
 // 일별 그리드
 allDays.forEach(day=>{
-  if(day.isTd){ctx.fillStyle='rgba(184,60,40,.06)';ctx.fillRect(day.x,0,day.w,bodyH);}
-  else if(day.isMo){ctx.fillStyle='rgba(0,0,0,.018)';ctx.fillRect(day.x,0,day.w,bodyH);}
-  else if(day.isF1){ctx.fillStyle='rgba(0,0,0,.025)';ctx.fillRect(day.x,0,day.w,bodyH);}
-  ctx.strokeStyle=day.isF1?'#9A9280':day.isMo?'#C8C2B0':'#EEEAE0';
+  const we=day.isSat||day.isSun;
+  if(day.isLast){ctx.fillStyle='rgba(212,168,72,.07)';ctx.fillRect(day.x,0,day.w,bodyH);}
+  else if(we){ctx.fillStyle='rgba(0,0,0,.03)';ctx.fillRect(day.x,0,day.w,bodyH);}
+  else if(day.isMo){ctx.fillStyle='rgba(0,0,0,.015)';ctx.fillRect(day.x,0,day.w,bodyH);}
+  ctx.strokeStyle=day.isF1?'#9A9080':day.isMo?'#C8C2B0':'#EEEAE0';
   ctx.lineWidth=day.isF1?1.5:day.isMo?1:0.5;
   ctx.beginPath();ctx.moveTo(day.x,0);ctx.lineTo(day.x,bodyH);ctx.stroke();
 });
@@ -298,54 +287,50 @@ allDays.forEach(day=>{
 // 단계 행
 phases.forEach((phase,pi)=>{
   const rowY=pi*ROW_H;
-  ctx.fillStyle=pi%2===0?'rgba(0,0,0,0)':'rgba(240,237,230,.3)';
+  ctx.fillStyle=pi%2===0?'transparent':'rgba(240,237,230,.25)';
   ctx.fillRect(0,rowY,chartW,ROW_H);
-  ctx.fillStyle=phase.color; ctx.fillRect(0,rowY,3,ROW_H);
-  ctx.font='600 10.5px system-ui,sans-serif'; ctx.fillStyle='#2D3B23';
-  ctx.fillText(phase.name,10,rowY+13);
+  ctx.fillStyle=phase.color;ctx.fillRect(0,rowY,3,ROW_H);
+  ctx.font='600 10px system-ui,sans-serif';ctx.fillStyle='#2D3B23';
+  ctx.fillText(phase.name,10,rowY+12);
+
+  const barSlotH=Math.max(16,(ROW_H-16)/Math.max(phase.bars.length,1));
+  const barH=Math.min(20,barSlotH-3);
+
   phase.bars.forEach((bar,bi)=>{
-    const x=dx(bar.start), x2=dx(bar.end), bw=Math.max(x2-x,3);
-    const bY=rowY+17+bi*(BAR_H+3);
+    const x=dx(bar.start), bw=dw(bar.start,bar.end);
+    const bY=rowY+15+bi*barSlotH;
     const col=BCOL[bar.type]||BCOL.be;
-    rr(x,bY,bw,BAR_H,4,col.fill);
-    if(bw>55){
-      ctx.font='500 8.5px system-ui'; ctx.fillStyle=col.text;
-      ctx.save(); ctx.beginPath(); ctx.rect(x+5,bY,bw-6,BAR_H); ctx.clip();
-      ctx.fillText(bar.label,x+5,bY+12); ctx.restore();
+    rr(x,bY,bw,barH,3,col.fill);
+    if(bw>40){
+      ctx.font=`500 ${Math.min(9,barH-3)}px system-ui`;ctx.fillStyle=col.text;
+      ctx.save();ctx.beginPath();ctx.rect(x+5,bY,bw-6,barH);ctx.clip();
+      ctx.fillText(bar.label,x+5,bY+barH/2+3.5);ctx.restore();
     }
   });
-  ctx.strokeStyle='#DDD8CC'; ctx.lineWidth=0.5;
+  ctx.strokeStyle='#DDD8CC';ctx.lineWidth=0.5;
   ctx.beginPath();ctx.moveTo(0,rowY+ROW_H);ctx.lineTo(chartW,rowY+ROW_H);ctx.stroke();
 });
 
 // 마일스톤 행
 const msY=phases.length*ROW_H;
-ctx.fillStyle='#F0EDE3'; ctx.fillRect(0,msY,chartW,52);
-ctx.font='700 10px system-ui'; ctx.fillStyle='#5A5A4A';
-ctx.fillText('마일스톤',10,msY+17);
-milestones.forEach(ms=>{
-  const x=dx(ms.date);
-  ctx.save(); ctx.translate(x,msY+32); ctx.rotate(Math.PI/4);
-  ctx.fillStyle=ms.color; ctx.fillRect(-5,-5,10,10); ctx.restore();
-  ctx.font='600 8.5px system-ui'; ctx.fillStyle=ms.color;
-  ctx.fillText(ms.label,x-16,msY+47);
-});
+if(msY<bodyH){
+  ctx.fillStyle='#F0EDE3';ctx.fillRect(0,msY,chartW,bodyH-msY);
+  ctx.font='700 10px system-ui';ctx.fillStyle='#5A5A4A';
+  ctx.fillText('마일스톤',10,msY+15);
+  milestones.forEach(ms=>{
+    const x=dx(ms.date);
+    ctx.save();ctx.translate(x,msY+28);ctx.rotate(Math.PI/4);
+    ctx.fillStyle=ms.color;ctx.fillRect(-5,-5,10,10);ctx.restore();
+    ctx.font='600 9px system-ui';ctx.fillStyle=ms.color;
+    ctx.fillText(ms.label,x-18,msY+45);
+  });
+}
 
-// Deadline 선 (노란)
-ctx.save(); ctx.strokeStyle='rgba(212,168,72,.9)'; ctx.lineWidth=2;
-ctx.setLineDash([7,4]);
-ctx.beginPath();ctx.moveTo(dlX,0);ctx.lineTo(dlX,bodyH);ctx.stroke();ctx.restore();
-
-// Today 선 (붉은)
-ctx.save(); ctx.strokeStyle='rgba(184,60,40,.9)'; ctx.lineWidth=1.5;
-ctx.setLineDash([5,4]);
-ctx.beginPath();ctx.moveTo(tdX,0);ctx.lineTo(tdX,bodyH);ctx.stroke();ctx.restore();
-
-// 라벨
-ctx.fillStyle='rgba(184,60,40,.95)'; ctx.font='700 9.5px system-ui';
-ctx.fillText('TODAY',tdX+3,11);
-ctx.fillStyle='rgba(180,130,20,.95)'; ctx.font='700 9.5px system-ui';
-ctx.fillText('DEADLINE',dlX+3,22);
+// 마지막 날 세로선 (6/24)
+const lastX=allDays[allDays.length-1].x+allDays[allDays.length-1].w;
+ctx.save();ctx.strokeStyle='rgba(212,168,72,.9)';ctx.lineWidth=2.5;
+ctx.setLineDash([8,4]);
+ctx.beginPath();ctx.moveTo(lastX,0);ctx.lineTo(lastX,bodyH);ctx.stroke();ctx.restore();
 </script>
 </body>
 </html>
