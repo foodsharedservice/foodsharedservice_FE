@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FoodShare 프로젝트 간트 차트</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif; background: #FAF8F3; color: #1F1D18; font-size: 13px; }
+
+  header { background: #4A5D3A; color: #FBF9F2; padding: 20px 32px; display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+  header p { font-size: 12px; color: rgba(251,249,242,0.7); margin-top: 2px; }
+  .header-dot { width: 10px; height: 10px; border-radius: 50%; background: #D4A848; flex-shrink: 0; }
+
+  .legend { display: flex; gap: 20px; padding: 14px 32px; background: #fff; border-bottom: 1px solid #E5E0D2; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #6B6759; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  .gantt-wrap { padding: 24px 32px 60px; overflow-x: auto; }
+  .gantt-inner { min-width: 900px; }
+
+  /* 월 헤더 */
+  .gantt-months { display: grid; margin-left: 260px; margin-bottom: 0; }
+  .month-cell { text-align: center; font-size: 11px; font-weight: 700; color: #95907F; letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 0 4px; border-left: 1px solid #E5E0D2; }
+
+  /* 주 헤더 */
+  .gantt-weeks { display: grid; margin-left: 260px; margin-bottom: 8px; border-bottom: 2px solid #E5E0D2; }
+  .week-cell { text-align: center; font-size: 10px; color: #C1BCA9; padding: 3px 0 5px; border-left: 1px solid #F0EBE0; }
+
+  /* 그룹 */
+  .group { margin-bottom: 6px; }
+  .group-header { display: flex; align-items: center; gap: 8px; padding: 10px 0 6px; }
+  .group-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #95907F; }
+  .group-line { flex: 1; height: 1px; background: #E5E0D2; }
+
+  /* 태스크 행 */
+  .task-row { display: flex; align-items: center; margin-bottom: 5px; }
+  .task-label { width: 260px; flex-shrink: 0; padding-right: 16px; display: flex; align-items: center; gap: 8px; }
+  .task-name { font-size: 12.5px; font-weight: 500; color: #3A372F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .task-status { flex-shrink: 0; }
+
+  .task-bars { flex: 1; position: relative; display: grid; }
+  .bar-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  .bar-bg-cell { border-left: 1px solid #F0EBE0; height: 100%; }
+  .bar-bg-cell.today { background: rgba(212,168,72,0.07); }
+
+  .bar-row { position: relative; height: 28px; display: grid; align-items: center; }
+  .bar { height: 20px; border-radius: 5px; position: absolute; display: flex; align-items: center; padding: 0 8px; font-size: 10.5px; font-weight: 600; white-space: nowrap; overflow: hidden; transition: filter 0.15s; }
+  .bar:hover { filter: brightness(0.92); }
+  .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* 바 색상 */
+  .bar-done     { background: #4A5D3A; color: #FBF9F2; }
+  .bar-done-fe  { background: #7A9A6A; color: #FBF9F2; }
+  .bar-inprog   { background: #D4A848; color: #1F1D18; }
+  .bar-todo     { background: #E5E0D2; color: #95907F; border: 1.5px dashed #C1BCA9; }
+  .bar-bug      { background: #B14A3C; color: #fff; }
+
+  /* 상태 배지 */
+  .pill { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .pill-done   { background: #ECEFE3; color: #4A5D3A; }
+  .pill-inprog { background: #F6ECD0; color: #B58F33; }
+  .pill-todo   { background: #F3EFE5; color: #95907F; }
+
+  /* 오늘 선 */
+  .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #D4A848; z-index: 10; }
+  .today-label { position: absolute; top: -18px; font-size: 9px; font-weight: 700; color: #D4A848; transform: translateX(-50%); white-space: nowrap; }
+
+  /* 마일스톤 */
+  .milestone { position: absolute; width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 16px solid #B14A3C; top: 6px; z-index: 5; }
+  .milestone-label { position: absolute; top: 24px; font-size: 9px; font-weight: 700; color: #B14A3C; transform: translateX(-50%); white-space: nowrap; }
+
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 32px 32px; }
+  .summary-card { background: #fff; border: 1px solid #E5E0D2; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 2px rgba(31,29,24,0.04); }
+  .summary-num { font-size: 26px; font-weight: 800; font-family: 'Inter', sans-serif; letter-spacing: -0.02em; }
+  .summary-label { font-size: 11px; color: #95907F; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-dot"></div>
+  <div>
+    <h1>FoodShare — 프로젝트 간트 차트</h1>
+    <p>2026년 5월 ~ 8월 · FE + BE 통합 일정</p>
+  </div>
+</header>
+
+<!-- 요약 카드 -->
+<div class="summary" style="margin-top:20px;">
+  <div class="summary-card">
+    <div class="summary-num" style="color:#4A5D3A;">18</div>
+    <div class="summary-label">완료된 태스크</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-num" style="color:#D4A848;">4</div>
+    <div class="summary-label">진행 중</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-num" style="color:#95907F;">6</div>
+    <div class="summary-label">예정</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-num" style="color:#B14A3C;">2</div>
+    <div class="summary-label">이슈</div>
+  </div>
+</div>
+
+<!-- 범례 -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#4A5D3A;"></div> BE 완료</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7A9A6A;"></div> FE 완료</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#D4A848;"></div> 진행 중</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#E5E0D2; border:1.5px dashed #C1BCA9;"></div> 예정</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#B14A3C;"></div> 이슈/버그</div>
+  <div class="legend-item">◆ 마일스톤</div>
+</div>
+
+<div class="gantt-wrap">
+<div class="gantt-inner" id="gantt"></div>
+</div>
+
+<script>
+// ============================================================
+// 설정: 2026-05-01 ~ 2026-08-31 (17주)
+// ============================================================
+const START = new Date('2026-05-01');
+const END   = new Date('2026-08-31');
+const TODAY = new Date('2026-06-25');
+const TOTAL_DAYS = Math.ceil((END - START) / 86400000);
+
+// 위치 계산
+function pct(dateStr) {
+  const d = new Date(dateStr);
+  const days = Math.max(0, Math.ceil((d - START) / 86400000));
+  return Math.min(100, (days / TOTAL_DAYS) * 100);
+}
+function width(startStr, endStr) {
+  const s = new Date(startStr), e = new Date(endStr);
+  const days = Math.ceil((e - s) / 86400000);
+  return Math.max(0.5, (days / TOTAL_DAYS) * 100);
+}
+
+// ============================================================
+// 데이터
+// ============================================================
+const groups = [
+  {
+    title: '🏗️  인프라 & 환경',
+    tasks: [
+      { name: 'EC2 + Docker 배포 환경 구성', status: 'done', type: 'be', start: '2026-05-01', end: '2026-05-10' },
+      { name: 'MySQL + Redis 세팅', status: 'done', type: 'be', start: '2026-05-05', end: '2026-05-12' },
+      { name: 'AWS S3 이미지 스토리지', status: 'done', type: 'be', start: '2026-05-10', end: '2026-05-16' },
+      { name: 'Next.js 프로젝트 초기화', status: 'done', type: 'fe', start: '2026-05-08', end: '2026-05-14' },
+      { name: 'CORS / 세션 쿠키 설정', status: 'issue', type: 'be', start: '2026-05-12', end: '2026-05-20', note: '로컬 secure:true 이슈' },
+    ]
+  },
+  {
+    title: '🔐  인증 (Auth)',
+    tasks: [
+      { name: 'POST /auth/login · logout', status: 'done', type: 'be', start: '2026-05-12', end: '2026-05-18' },
+      { name: 'POST /auth/email/send · verify', status: 'done', type: 'be', start: '2026-05-14', end: '2026-05-22' },
+      { name: 'POST /members (회원가입)', status: 'done', type: 'be', start: '2026-05-16', end: '2026-05-24' },
+      { name: 'FE 로그인 · 회원가입 화면', status: 'done', type: 'fe', start: '2026-05-20', end: '2026-06-01' },
+      { name: 'Spring Session 유지 검증', status: 'issue', type: 'be', start: '2026-06-20', end: '2026-06-28', note: '로컬 401 이슈' },
+    ]
+  },
+  {
+    title: '🥗  음식 (Foods)',
+    tasks: [
+      { name: 'GET /foods 목록 · 상세', status: 'done', type: 'be', start: '2026-05-18', end: '2026-05-28' },
+      { name: 'POST /foods 등록 (멀티파트)', status: 'done', type: 'be', start: '2026-05-22', end: '2026-06-02' },
+      { name: 'POST /foods/expired-date (AI OCR)', status: 'done', type: 'be', start: '2026-05-24', end: '2026-06-05' },
+      { name: 'DELETE /foods/{id}', status: 'done', type: 'be', start: '2026-05-28', end: '2026-06-03' },
+      { name: 'PATCH /foods/{id} 수정', status: 'done', type: 'be', start: '2026-06-01', end: '2026-06-08' },
+      { name: 'FE 홈 피드 · 무한스크롤', status: 'done', type: 'fe', start: '2026-05-28', end: '2026-06-08' },
+      { name: 'FE 음식 상세 페이지', status: 'done', type: 'fe', start: '2026-06-01', end: '2026-06-10' },
+      { name: 'FE 음식 등록 폼 (AI 소비기한)', status: 'done', type: 'fe', start: '2026-06-05', end: '2026-06-15' },
+      { name: 'FE 음식 수정 모달', status: 'done', type: 'fe', start: '2026-06-23', end: '2026-06-25' },
+    ]
+  },
+  {
+    title: '📋  나눔 요청 (Requests)',
+    tasks: [
+      { name: 'POST /foods/{id}/requests', status: 'done', type: 'be', start: '2026-06-03', end: '2026-06-10' },
+      { name: 'GET /foods/{id}/requests (등록자)', status: 'done', type: 'be', start: '2026-06-05', end: '2026-06-12' },
+      { name: 'GET /members/me/requests (신청자)', status: 'done', type: 'be', start: '2026-06-05', end: '2026-06-12' },
+      { name: 'PATCH approve · reject', status: 'done', type: 'be', start: '2026-06-08', end: '2026-06-14' },
+      { name: 'DELETE /foods/{id}/requests/{id} 취소', status: 'done', type: 'be', start: '2026-06-10', end: '2026-06-16' },
+      { name: 'FE 상세 — 요청 보내기/취소', status: 'done', type: 'fe', start: '2026-06-15', end: '2026-06-23' },
+      { name: 'FE 마이페이지 — 보낸 요청 목록', status: 'done', type: 'fe', start: '2026-06-23', end: '2026-06-25' },
+    ]
+  },
+  {
+    title: '💬  채팅 (Chat)',
+    tasks: [
+      { name: 'POST /chat/rooms', status: 'done', type: 'be', start: '2026-06-10', end: '2026-06-18' },
+      { name: 'GET /chat/rooms/{id}/messages (커서)', status: 'done', type: 'be', start: '2026-06-14', end: '2026-06-22' },
+      { name: 'STOMP WebSocket /ws', status: 'done', type: 'be', start: '2026-06-16', end: '2026-06-24' },
+      { name: 'FE 채팅 목록 · 실시간 채팅방', status: 'done', type: 'fe', start: '2026-06-18', end: '2026-07-01' },
+      { name: '읽음 처리 / 안 읽은 메시지 수', status: 'todo', type: 'be', start: '2026-07-05', end: '2026-07-18' },
+    ]
+  },
+  {
+    title: '👤  회원 (Members)',
+    tasks: [
+      { name: 'GET · PATCH /members/me', status: 'done', type: 'be', start: '2026-05-24', end: '2026-06-01' },
+      { name: 'DELETE /members/me 탈퇴', status: 'done', type: 'be', start: '2026-05-28', end: '2026-06-03' },
+      { name: 'FE 마이페이지 · 정보수정 모달', status: 'done', type: 'fe', start: '2026-06-10', end: '2026-06-22' },
+    ]
+  },
+  {
+    title: '🖼️  이미지 (Images)',
+    tasks: [
+      { name: 'DELETE /images/{id}', status: 'done', type: 'be', start: '2026-06-05', end: '2026-06-10' },
+      { name: 'FE 이미지 삭제 연결', status: 'inprog', type: 'fe', start: '2026-06-25', end: '2026-07-05' },
+    ]
+  },
+  {
+    title: '📐  QA & 배포',
+    tasks: [
+      { name: '디자인 시스템 정리', status: 'done', type: 'fe', start: '2026-06-20', end: '2026-06-25' },
+      { name: '와이어프레임 HTML', status: 'done', type: 'fe', start: '2026-06-25', end: '2026-06-25' },
+      { name: '포스트맨 API 테스트', status: 'inprog', type: 'be', start: '2026-06-23', end: '2026-07-05' },
+      { name: '모바일 반응형 QA', status: 'inprog', type: 'fe', start: '2026-07-01', end: '2026-07-14' },
+      { name: 'Vercel 프론트 배포', status: 'done', type: 'fe', start: '2026-06-15', end: '2026-06-18' },
+      { name: 'EC2 백엔드 배포 안정화', status: 'inprog', type: 'be', start: '2026-06-20', end: '2026-07-10' },
+      { name: '성능 최적화 · 캐싱', status: 'todo', type: 'be', start: '2026-07-15', end: '2026-08-01' },
+      { name: '알림 기능 (선택)', status: 'todo', type: 'be', start: '2026-07-20', end: '2026-08-10' },
+      { name: '최종 UAT', status: 'todo', type: 'fe', start: '2026-08-10', end: '2026-08-25' },
+    ]
+  },
+];
+
+const milestones = [
+  { date: '2026-06-01', label: 'BE API v1 완료' },
+  { date: '2026-06-25', label: 'FE v1 완료' },
+  { date: '2026-07-15', label: '통합 QA 시작' },
+  { date: '2026-08-25', label: '정식 출시' },
+];
+
+// ============================================================
+// 렌더
+// ============================================================
+const gantt = document.getElementById('gantt');
+
+// 월/주 헤더 생성
+const months = [];
+let cur = new Date(START);
+while (cur <= END) {
+  const y = cur.getFullYear(), m = cur.getMonth();
+  const label = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m] + ' ' + y;
+  const monthStart = new Date(y, m, 1);
+  const monthEnd = new Date(y, m + 1, 0);
+  const s = Math.max(+START, +monthStart);
+  const e = Math.min(+END, +monthEnd);
+  const days = (e - s) / 86400000 + 1;
+  months.push({ label, pct: ((s - START) / 86400000 / TOTAL_DAYS) * 100, w: (days / TOTAL_DAYS) * 100 });
+  cur = new Date(y, m + 1, 1);
+}
+
+// 주 배열 (월요일 기준 17주)
+const weeks = [];
+let wCur = new Date(START);
+// 첫 월요일로
+while (wCur.getDay() !== 1) wCur.setDate(wCur.getDate() + 1);
+while (wCur <= END) {
+  const wEnd = new Date(wCur); wEnd.setDate(wCur.getDate() + 6);
+  const s = Math.max(+START, +wCur);
+  const e = Math.min(+END, +wEnd);
+  const days = (e - s) / 86400000 + 1;
+  weeks.push({ date: new Date(wCur), pct: ((s - START) / 86400000 / TOTAL_DAYS) * 100, w: (days / TOTAL_DAYS) * 100 });
+  wCur.setDate(wCur.getDate() + 7);
+}
+
+// 오늘 위치
+const todayPct = Math.min(100, ((TODAY - START) / 86400000 / TOTAL_DAYS) * 100);
+
+function barClass(task) {
+  if (task.status === 'done' && task.type === 'be') return 'bar bar-done';
+  if (task.status === 'done' && task.type === 'fe')  return 'bar bar-done-fe';
+  if (task.status === 'inprog') return 'bar bar-inprog';
+  if (task.status === 'issue')  return 'bar bar-bug';
+  return 'bar bar-todo';
+}
+function pillHtml(status) {
+  if (status === 'done')   return `<span class="pill pill-done">완료</span>`;
+  if (status === 'inprog') return `<span class="pill pill-inprog">진행중</span>`;
+  if (status === 'issue')  return `<span class="pill pill-inprog" style="background:#FBEAE5;color:#B14A3C;">이슈</span>`;
+  return `<span class="pill pill-todo">예정</span>`;
+}
+
+let html = '';
+
+// 월 헤더
+html += `<div class="gantt-months" style="display:flex; margin-left:260px; position:relative; height:28px;">`;
+months.forEach(m => {
+  html += `<div style="position:absolute; left:${m.pct}%; width:${m.w}%; text-align:center; font-size:11px; font-weight:700; color:#95907F; letter-spacing:0.06em; border-left:1px solid #E5E0D2; padding:6px 0;">${m.label}</div>`;
+});
+html += `</div>`;
+
+// 주 헤더
+html += `<div style="display:flex; margin-left:260px; position:relative; height:22px; border-bottom:2px solid #E5E0D2; margin-bottom:6px;">`;
+weeks.forEach(w => {
+  const d = w.date;
+  const label = `${d.getMonth()+1}/${d.getDate()}`;
+  html += `<div style="position:absolute; left:${w.pct}%; width:${w.w}%; text-align:center; font-size:9px; color:#C1BCA9; border-left:1px solid #F0EBE0; padding:4px 0;">${label}</div>`;
+});
+// 오늘 선
+html += `<div class="today-line" style="left:${todayPct}%;"><div class="today-label">TODAY</div></div>`;
+html += `</div>`;
+
+// 그룹 & 태스크
+groups.forEach(g => {
+  html += `<div class="group">`;
+  html += `<div class="group-header"><span class="group-title">${g.title}</span><div class="group-line"></div></div>`;
+
+  g.tasks.forEach(task => {
+    const left = pct(task.start);
+    const w    = width(task.start, task.end);
+    const cls  = barClass(task);
+
+    html += `<div class="task-row">`;
+    html += `<div class="task-label">`;
+    html += `<span class="task-name" title="${task.name}">${task.name}</span>`;
+    html += pillHtml(task.status);
+    html += `</div>`;
+
+    html += `<div class="task-bars" style="position:relative; height:32px;">`;
+    // 배경 격자
+    weeks.forEach(w2 => {
+      const isToday = w2.date <= TODAY && new Date(w2.date.getTime() + 6*86400000) >= TODAY;
+      html += `<div style="position:absolute; left:${w2.pct}%; width:${w2.w}%; height:100%; border-left:1px solid #F0EBE0; ${isToday ? 'background:rgba(212,168,72,0.06);' : ''}"></div>`;
+    });
+    // 오늘 선
+    html += `<div style="position:absolute; left:${todayPct}%; top:0; bottom:0; width:1.5px; background:rgba(212,168,72,0.5); z-index:5;"></div>`;
+
+    // 바
+    let tooltip = task.note ? ` title="${task.note}"` : '';
+    html += `<div class="${cls}" style="left:${left}%; width:${Math.max(w,1)}%;"${tooltip}>`;
+    if (w > 4) html += `<span class="bar-label">${task.type === 'be' ? 'BE' : 'FE'}</span>`;
+    html += `</div>`;
+
+    html += `</div>`; // task-bars
+    html += `</div>`; // task-row
+  });
+
+  html += `</div>`; // group
+});
+
+// 마일스톤 오버레이 (별도 행)
+html += `<div style="position:relative; height:40px; margin-left:260px; margin-top:12px; border-top:1px dashed #E5E0D2;">`;
+weeks.forEach(w2 => {
+  html += `<div style="position:absolute; left:${w2.pct}%; width:${w2.w}%; height:100%; border-left:1px solid #F0EBE0;"></div>`;
+});
+html += `<div style="position:absolute; left:${todayPct}%; top:0; bottom:0; width:1.5px; background:rgba(212,168,72,0.5);"></div>`;
+milestones.forEach(m => {
+  const p = pct(m.date);
+  html += `
+    <div style="position:absolute; left:${p}%; transform:translateX(-50%); top:4px;">
+      <div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid #B14A3C; margin:0 auto;"></div>
+      <div style="font-size:9px; font-weight:700; color:#B14A3C; white-space:nowrap; transform:translateX(-50%); margin-left:0; text-align:center; margin-top:2px;">${m.label}</div>
+    </div>`;
+});
+html += `</div>`;
+
+gantt.innerHTML = html;
+</script>
+</body>
+</html>
