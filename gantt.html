@@ -218,6 +218,44 @@ const groups = [
     ]
   },
   {
+    title: '🗺️  지역 기반 v2 — 사전 분석',
+    tasks: [
+      { name: '브랜치 현황 확인 & API 명세 검토', status: 'done', type: 'be', start: '2026-06-05', end: '2026-06-06' },
+      { name: 'Food 엔티티 / v1 코드 영향 분석', status: 'done', type: 'be', start: '2026-06-06', end: '2026-06-07' },
+    ]
+  },
+  {
+    title: '🗺️  지역 기반 v2 — Region 도메인 (TDD)',
+    tasks: [
+      { name: 'RegionRepositoryTest 작성 (RED)', status: 'done', type: 'be', start: '2026-06-07', end: '2026-06-08' },
+      { name: 'RegionRepository 구현 (GREEN)', status: 'done', type: 'be', start: '2026-06-08', end: '2026-06-09' },
+      { name: 'RegionServiceTest 작성 (RED)', status: 'done', type: 'be', start: '2026-06-09', end: '2026-06-10' },
+      { name: 'RegionService 구현 (GREEN)', status: 'done', type: 'be', start: '2026-06-10', end: '2026-06-11' },
+      { name: 'RegionControllerTest 작성 (RED)', status: 'done', type: 'be', start: '2026-06-11', end: '2026-06-12' },
+      { name: 'RegionController 구현 (GREEN)', status: 'done', type: 'be', start: '2026-06-12', end: '2026-06-13' },
+    ]
+  },
+  {
+    title: '🗺️  지역 기반 v2 — Food v2 도메인 (TDD)',
+    tasks: [
+      { name: 'Food 엔티티 regionId 필드 추가', status: 'done', type: 'be', start: '2026-06-13', end: '2026-06-14' },
+      { name: 'FoodV2RepositoryTest 작성 (RED)', status: 'done', type: 'be', start: '2026-06-14', end: '2026-06-15' },
+      { name: 'FoodV2Repository 구현 (GREEN)', status: 'done', type: 'be', start: '2026-06-15', end: '2026-06-16' },
+      { name: 'FoodV2ServiceTest 작성 (RED)', status: 'done', type: 'be', start: '2026-06-16', end: '2026-06-17' },
+      { name: 'FoodV2Service 구현 (GREEN)', status: 'done', type: 'be', start: '2026-06-17', end: '2026-06-18' },
+      { name: 'FoodV2ControllerTest 작성 (RED)', status: 'done', type: 'be', start: '2026-06-18', end: '2026-06-19' },
+      { name: 'FoodV2Facade 구현', status: 'done', type: 'be', start: '2026-06-19', end: '2026-06-20' },
+      { name: 'FoodV2Controller 구현 (GREEN)', status: 'done', type: 'be', start: '2026-06-20', end: '2026-06-21' },
+    ]
+  },
+  {
+    title: '🗺️  지역 기반 v2 — 검증 & 배포',
+    tasks: [
+      { name: '전체 테스트 실행 (257개 통과 확인)', status: 'done', type: 'be', start: '2026-06-23', end: '2026-06-24' },
+      { name: 'commit & push to claude/youthful-rubin', status: 'done', type: 'be', start: '2026-06-24', end: '2026-06-24' },
+    ]
+  },
+  {
     title: '📐  QA & 배포',
     tasks: [
       { name: '디자인 시스템 정리', status: 'done', type: 'fe', start: '2026-06-20', end: '2026-06-25' },
@@ -235,6 +273,7 @@ const groups = [
 
 const milestones = [
   { date: '2026-06-01', label: 'BE API v1 완료' },
+  { date: '2026-06-24', label: '🏁 v2 배포 완료 (DEADLINE)' },
   { date: '2026-06-25', label: 'FE v1 완료' },
   { date: '2026-07-15', label: '통합 QA 시작' },
   { date: '2026-08-25', label: '정식 출시' },
