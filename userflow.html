@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>User Flow</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#F5F5F5;font-family:'Apple SD Gothic Neo',Pretendard,sans-serif;}
+#canvas{
+  position:relative;
+  width:1000px;
+  height:1500px;
+  background:#FAFAFA;
+  overflow:hidden;
+}
+svg#arrows{
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+  pointer-events:none;
+}
+/* Section Labels */
+.sec-label{
+  position:absolute;
+  font-size:9px;
+  font-weight:700;
+  color:#888;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+/* Screen Card */
+.sc{
+  position:absolute;
+  width:120px;
+  border:1.5px solid #CCCCCC;
+  border-radius:6px;
+  background:#fff;
+  overflow:hidden;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);
+}
+.sc-title{
+  font-size:7.5px;
+  font-weight:700;
+  color:#555;
+  padding:3px 5px 0;
+}
+.sc-hd{
+  height:14px;
+  background:#222;
+  display:flex;
+  align-items:center;
+  padding:0 5px;
+  gap:3px;
+}
+.sc-hd span{
+  display:inline-block;
+  width:5px;height:5px;
+  border-radius:50%;
+  background:#555;
+}
+.sc-bd{
+  padding:5px 5px 6px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+/* Placeholder elements */
+.l{height:5px;background:#E0E0E0;border-radius:2px;}
+.ls{height:5px;background:#E0E0E0;border-radius:2px;width:60%;}
+.lxs{height:5px;background:#E0E0E0;border-radius:2px;width:40%;}
+.inp{height:12px;background:#F2F2F2;border:1px solid #DDD;border-radius:3px;}
+.btn{height:12px;background:#333;border-radius:3px;}
+.btng{height:12px;background:#B0B0B0;border-radius:3px;}
+.img{height:32px;background:#EBEBEB;border-radius:3px;}
+.img2{height:22px;background:#EBEBEB;border-radius:3px;}
+.card{height:40px;background:#F5F5F5;border:1px solid #E8E8E8;border-radius:3px;padding:4px;}
+.row2{display:flex;gap:3px;}
+.row2 .img2{flex:1;}
+.chip{height:10px;background:#E8E8E8;border-radius:10px;width:50%;}
+.avatar{width:24px;height:24px;border-radius:50%;background:#CCC;flex-shrink:0;}
+.row-h{display:flex;gap:3px;align-items:center;}
+.flex1{flex:1;}
+.badge{height:10px;background:#444;border-radius:10px;width:30%;}
+.msg-r{height:14px;background:#333;border-radius:8px 8px 2px 8px;width:70%;align-self:flex-end;}
+.msg-l{height:14px;background:#E8E8E8;border-radius:8px 8px 8px 2px;width:60%;}
+.tab{height:16px;background:#F0F0F0;border-top:1px solid #DDD;display:flex;align-items:center;justify-content:space-around;padding:0 6px;}
+.tab span{width:12px;height:12px;background:#CCC;border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="canvas">
+
+<!-- ═══════════════════════════════════════════════
+     SVG ARROWS
+════════════════════════════════════════════════ -->
+<svg id="arrows">
+  <defs>
+    <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#999"/>
+    </marker>
+    <marker id="arr-b" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- AUTH ROW arrows -->
+  <!-- S01→S02 -->
+  <line x1="172" y1="105" x2="208" y2="105" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="185" y="101" font-size="7" fill="#AAA" text-anchor="middle">로그인</text>
+  <!-- S02→S03 -->
+  <line x1="332" y1="105" x2="368" y2="105" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="350" y="101" font-size="7" fill="#AAA" text-anchor="middle">회원가입</text>
+  <!-- S02→S04 (로그인 완료) vertical -->
+  <path d="M270 160 L270 195 L80 195 L80 240" stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#arr-b)" stroke-dasharray="4,2"/>
+  <text x="170" y="192" font-size="7" fill="#777" text-anchor="middle">로그인 완료</text>
+
+  <!-- MAIN: S04→S05 -->
+  <line x1="172" y1="315" x2="208" y2="315" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="190" y="311" font-size="7" fill="#AAA" text-anchor="middle">탭</text>
+
+  <!-- S05→S06 -->
+  <line x1="332" y1="315" x2="368" y2="315" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- S06→S07 -->
+  <line x1="492" y1="315" x2="528" y2="315" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="510" y="311" font-size="7" fill="#AAA" text-anchor="middle">요청</text>
+  <!-- S07→S08 -->
+  <line x1="652" y1="315" x2="688" y2="315" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="670" y="311" font-size="7" fill="#AAA" text-anchor="middle">완료</text>
+
+  <!-- S04→S09 owner branch vertical -->
+  <path d="M80 400 L80 450 L250 450 L250 468" stroke="#999" stroke-width="1.5" fill="none" marker-end="url(#arr)" stroke-dasharray="3,2"/>
+  <text x="155" y="446" font-size="7" fill="#AAA" text-anchor="middle">등록자</text>
+  <!-- S09→S10 -->
+  <line x1="332" y1="525" x2="368" y2="525" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- S10→S11 -->
+  <line x1="492" y1="525" x2="528" y2="525" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- S04→S12 register branch -->
+  <path d="M80 400 L80 630 L250 630 L250 648" stroke="#999" stroke-width="1.5" fill="none" marker-end="url(#arr)" stroke-dasharray="3,2"/>
+  <text x="40" y="525" font-size="7" fill="#AAA" text-anchor="middle">등록</text>
+  <!-- S12→S13 -->
+  <line x1="332" y1="705" x2="368" y2="705" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- S13→S14 -->
+  <line x1="492" y1="705" x2="528" y2="705" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="510" y="701" font-size="7" fill="#AAA" text-anchor="middle">제출</text>
+
+  <!-- S04→S15 mypage branch -->
+  <path d="M80 400 L80 810 L250 810 L250 828" stroke="#999" stroke-width="1.5" fill="none" marker-end="url(#arr)" stroke-dasharray="3,2"/>
+  <text x="40" y="710" font-size="7" fill="#AAA" text-anchor="middle">MY</text>
+  <!-- S15→S16 -->
+  <line x1="332" y1="885" x2="368" y2="885" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- S16→S17 -->
+  <line x1="492" y1="885" x2="528" y2="885" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="510" y="881" font-size="7" fill="#AAA" text-anchor="middle">수정</text>
+
+  <!-- S15→S18 sent requests -->
+  <path d="M410 940 L410 980 L490 980 L490 1008" stroke="#999" stroke-width="1.5" fill="none" marker-end="url(#arr)" stroke-dasharray="3,2"/>
+  <text x="450" y="977" font-size="7" fill="#AAA" text-anchor="middle">보낸요청</text>
+  <!-- S18→S19 -->
+  <line x1="572" y1="1065" x2="608" y2="1065" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- S05→S20 chat branch -->
+  <path d="M410 1120 L410 1155 L490 1155 L490 1188" stroke="#999" stroke-width="1.5" fill="none" marker-end="url(#arr)" stroke-dasharray="3,2"/>
+  <text x="450" y="1153" font-size="7" fill="#AAA" text-anchor="middle">채팅</text>
+  <!-- S20→S21 -->
+  <line x1="572" y1="1245" x2="608" y2="1245" stroke="#999" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="590" y="1241" font-size="7" fill="#AAA" text-anchor="middle">입장</text>
+
+  <!-- Flow group dividers -->
+  <line x1="20" y1="220" x2="980" y2="220" stroke="#E5E5E5" stroke-width="1"/>
+  <line x1="20" y1="430" x2="980" y2="430" stroke="#E5E5E5" stroke-width="1"/>
+  <line x1="20" y1="610" x2="980" y2="610" stroke="#E5E5E5" stroke-width="1"/>
+  <line x1="20" y1="790" x2="980" y2="790" stroke="#E5E5E5" stroke-width="1"/>
+  <line x1="20" y1="970" x2="980" y2="970" stroke="#E5E5E5" stroke-width="1"/>
+  <line x1="20" y1="1150" x2="980" y2="1150" stroke="#E5E5E5" stroke-width="1"/>
+</svg>
+
+<!-- ═══════════════════════════════════════════════
+     SECTION LABELS
+════════════════════════════════════════════════ -->
+<div class="sec-label" style="left:20px;top:22px;">① 인증 흐름</div>
+<div class="sec-label" style="left:20px;top:232px;">② 메인 홈 → 음식 상세 → 요청</div>
+<div class="sec-label" style="left:20px;top:442px;">③ 등록자 뷰 (받은 요청 확인)</div>
+<div class="sec-label" style="left:20px;top:622px;">④ 음식 등록</div>
+<div class="sec-label" style="left:20px;top:802px;">⑤ 마이페이지</div>
+<div class="sec-label" style="left:20px;top:982px;">⑥ 보낸 요청</div>
+<div class="sec-label" style="left:20px;top:1162px;">⑦ 채팅</div>
+
+<!-- ═══════════════════════════════════════════════
+     ROW ① AUTH  (y=38)
+════════════════════════════════════════════════ -->
+
+<!-- S01 비로그인 홈 -->
+<div class="sc" style="left:20px;top:38px;">
+  <div class="sc-title">비로그인 홈</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="l"></div>
+    <div class="img"></div>
+    <div class="ls"></div>
+    <div class="btng"></div>
+  </div>
+  <div class="tab"><span></span><span></span><span></span></div>
+</div>
+
+<!-- S02 로그인 -->
+<div class="sc" style="left:210px;top:38px;">
+  <div class="sc-title">로그인</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="l"></div>
+    <div class="inp"></div>
+    <div class="inp"></div>
+    <div class="btn"></div>
+    <div class="ls" style="text-align:center;font-size:6px;color:#AAA;">회원가입</div>
+  </div>
+</div>
+
+<!-- S03 회원가입 -->
+<div class="sc" style="left:370px;top:38px;">
+  <div class="sc-title">회원가입</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="inp"></div>
+    <div class="inp"></div>
+    <div class="inp"></div>
+    <div class="inp"></div>
+    <div class="btn"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ROW ② MAIN (y=248)
+════════════════════════════════════════════════ -->
+
+<!-- S04 홈 피드 -->
+<div class="sc" style="left:20px;top:248px;">
+  <div class="sc-title">홈 피드</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="row2"><div class="chip"></div></div>
+    <div class="card"></div>
+    <div class="card"></div>
+    <div class="card"></div>
+  </div>
+  <div class="tab"><span></span><span></span><span></span></div>
+</div>
+
+<!-- S05 음식 상세 -->
+<div class="sc" style="left:210px;top:248px;">
+  <div class="sc-title">음식 상세</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="img"></div>
+    <div class="l"></div>
+    <div class="ls"></div>
+    <div class="btn"></div>
+  </div>
+</div>
+
+<!-- S06 요청 확인 모달 -->
+<div class="sc" style="left:370px;top:248px;">
+  <div class="sc-title">요청 확인</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div style="background:#F8F8F8;border-radius:4px;padding:4px;">
+      <div class="l"></div>
+      <div class="ls"></div>
+      <div style="display:flex;gap:3px;margin-top:3px;">
+        <div class="btng" style="flex:1;"></div>
+        <div class="btn" style="flex:1;"></div>
+      </div>
+    </div>
+    <div class="ls"></div>
+    <div class="l"></div>
+  </div>
+</div>
+
+<!-- S07 요청 완료 -->
+<div class="sc" style="left:530px;top:248px;">
+  <div class="sc-title">요청 완료</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div style="text-align:center;padding:8px 0;">
+      <div style="width:24px;height:24px;border-radius:50%;background:#333;margin:0 auto 4px;"></div>
+    </div>
+    <div class="l"></div>
+    <div class="ls" style="margin:0 auto;"></div>
+    <div class="btn"></div>
+  </div>
+</div>
+
+<!-- S08 채팅으로 이동 -->
+<div class="sc" style="left:690px;top:248px;">
+  <div class="sc-title">채팅방</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="msg-l"></div>
+    <div class="msg-r"></div>
+    <div class="msg-l"></div>
+    <div class="inp" style="margin-top:2px;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ROW ③ OWNER VIEW (y=468)
+════════════════════════════════════════════════ -->
+
+<!-- S09 받은요청 목록 -->
+<div class="sc" style="left:210px;top:468px;">
+  <div class="sc-title">받은 요청 목록</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="row-h"><div class="avatar"></div><div class="flex1"><div class="l"></div><div class="ls" style="margin-top:2px;"></div></div></div>
+    <div class="row-h"><div class="avatar"></div><div class="flex1"><div class="l"></div><div class="ls" style="margin-top:2px;"></div></div></div>
+  </div>
+  <div class="tab"><span></span><span></span><span></span></div>
+</div>
+
+<!-- S10 요청 상세 -->
+<div class="sc" style="left:370px;top:468px;">
+  <div class="sc-title">요청 상세</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="row-h"><div class="avatar"></div><div class="flex1"><div class="l"></div><div class="lxs" style="margin-top:2px;"></div></div></div>
+    <div class="l"></div>
+    <div class="ls"></div>
+    <div style="display:flex;gap:3px;">
+      <div class="btng" style="flex:1;"></div>
+      <div class="btn" style="flex:1;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- S11 승인 완료 -->
+<div class="sc" style="left:530px;top:468px;">
+  <div class="sc-title">승인 완료</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div style="text-align:center;padding:6px 0;">
+      <div style="width:20px;height:20px;border-radius:50%;background:#333;margin:0 auto 3px;"></div>
+    </div>
+    <div class="l"></div>
+    <div class="ls" style="margin:0 auto;"></div>
+    <div class="btn"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ROW ④ REGISTER (y=648)
+════════════════════════════════════════════════ -->
+
+<!-- S12 음식 등록 폼 -->
+<div class="sc" style="left:210px;top:648px;">
+  <div class="sc-title">음식 등록</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="img2"></div>
+    <div class="inp"></div>
+    <div class="inp"></div>
+    <div class="inp"></div>
+  </div>
+</div>
+
+<!-- S13 사진 업로드 -->
+<div class="sc" style="left:370px;top:648px;">
+  <div class="sc-title">사진 업로드</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div style="height:50px;background:#F0F0F0;border:1.5px dashed #CCC;border-radius:3px;display:flex;align-items:center;justify-content:center;">
+      <div style="width:16px;height:16px;background:#CCC;border-radius:2px;"></div>
+    </div>
+    <div class="btn"></div>
+  </div>
+</div>
+
+<!-- S14 등록 완료 -->
+<div class="sc" style="left:530px;top:648px;">
+  <div class="sc-title">등록 완료</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div style="text-align:center;padding:8px 0;">
+      <div style="width:20px;height:20px;border-radius:50%;background:#333;margin:0 auto 3px;"></div>
+    </div>
+    <div class="l"></div>
+    <div class="btn"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ROW ⑤ MYPAGE (y=828)
+════════════════════════════════════════════════ -->
+
+<!-- S15 마이페이지 -->
+<div class="sc" style="left:210px;top:828px;">
+  <div class="sc-title">마이페이지</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="row-h" style="gap:5px;">
+      <div class="avatar"></div>
+      <div class="flex1"><div class="l"></div><div class="lxs" style="margin-top:2px;"></div></div>
+    </div>
+    <div class="l"></div>
+    <div class="l"></div>
+    <div class="l"></div>
+  </div>
+  <div class="tab"><span></span><span></span><span></span></div>
+</div>
+
+<!-- S16 프로필 수정 -->
+<div class="sc" style="left:370px;top:828px;">
+  <div class="sc-title">프로필 수정</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div style="width:28px;height:28px;border-radius:50%;background:#DDD;margin:0 auto 3px;"></div>
+    <div class="inp"></div>
+    <div class="inp"></div>
+    <div class="btn"></div>
+  </div>
+</div>
+
+<!-- S17 수정 완료 -->
+<div class="sc" style="left:530px;top:828px;">
+  <div class="sc-title">수정 완료</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div style="text-align:center;padding:4px 0;">
+      <div style="width:18px;height:18px;border-radius:50%;background:#333;margin:0 auto 3px;"></div>
+    </div>
+    <div class="l"></div>
+    <div class="btng"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ROW ⑥ SENT REQUESTS (y=1008)
+════════════════════════════════════════════════ -->
+
+<!-- S18 보낸 요청 목록 -->
+<div class="sc" style="left:410px;top:1008px;">
+  <div class="sc-title">보낸 요청</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="row-h"><div class="img2" style="width:22px;height:22px;border-radius:3px;flex-shrink:0;"></div><div class="flex1"><div class="l"></div><div class="badge" style="margin-top:2px;"></div></div></div>
+    <div class="row-h"><div class="img2" style="width:22px;height:22px;border-radius:3px;flex-shrink:0;"></div><div class="flex1"><div class="l"></div><div class="badge" style="margin-top:2px;"></div></div></div>
+    <div class="row-h"><div class="img2" style="width:22px;height:22px;border-radius:3px;flex-shrink:0;"></div><div class="flex1"><div class="l"></div><div class="badge" style="margin-top:2px;"></div></div></div>
+  </div>
+  <div class="tab"><span></span><span></span><span></span></div>
+</div>
+
+<!-- S19 요청 상태 상세 -->
+<div class="sc" style="left:570px;top:1008px;">
+  <div class="sc-title">요청 상태</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="img2"></div>
+    <div class="l"></div>
+    <div class="ls"></div>
+    <div class="badge"></div>
+    <div class="btng"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ROW ⑦ CHAT (y=1188)
+════════════════════════════════════════════════ -->
+
+<!-- S20 채팅 목록 -->
+<div class="sc" style="left:410px;top:1188px;">
+  <div class="sc-title">채팅 목록</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="row-h"><div class="avatar"></div><div class="flex1"><div class="l"></div><div class="ls" style="margin-top:2px;"></div></div></div>
+    <div class="row-h"><div class="avatar"></div><div class="flex1"><div class="l"></div><div class="ls" style="margin-top:2px;"></div></div></div>
+    <div class="row-h"><div class="avatar"></div><div class="flex1"><div class="l"></div><div class="ls" style="margin-top:2px;"></div></div></div>
+  </div>
+  <div class="tab"><span></span><span></span><span></span></div>
+</div>
+
+<!-- S21 채팅방 -->
+<div class="sc" style="left:570px;top:1188px;">
+  <div class="sc-title">채팅방</div>
+  <div class="sc-hd"><span></span><span></span></div>
+  <div class="sc-bd">
+    <div class="msg-l"></div>
+    <div class="msg-r"></div>
+    <div class="msg-l"></div>
+    <div class="msg-r"></div>
+    <div class="inp"></div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
